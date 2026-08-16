@@ -82,8 +82,8 @@ struct CleanerView: View {
         NavigationStack {
             VStack(spacing: 0) {
                 Picker("", selection: $selectedCategory) {
-                    Text(language.text("browser.category_third_party")).tag(CleanerAppCategory.thirdParty)
-                    Text(language.text("browser.category_system")).tag(CleanerAppCategory.system)
+                    Text("Third-party").tag(CleanerAppCategory.thirdParty)
+                    Text("Apple / System").tag(CleanerAppCategory.system)
                 }
                 .pickerStyle(.segmented)
                 .padding(.horizontal, 16)
