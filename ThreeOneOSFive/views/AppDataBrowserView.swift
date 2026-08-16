@@ -120,8 +120,8 @@ struct AppDataBrowserView: View {
                 FilesTabStrip(session: $tabSession)
             }
             Picker("", selection: $selectedCategory) {
-                Text(language.text("browser.category_third_party")).tag(AppCategory.thirdParty)
-                Text(language.text("browser.category_system")).tag(AppCategory.system)
+                Text("Third-party").tag(AppCategory.thirdParty)
+                Text("Apple / System").tag(AppCategory.system)
             }
             .pickerStyle(.segmented)
             .padding(.horizontal, 16)
