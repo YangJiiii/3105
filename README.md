@@ -91,7 +91,14 @@ Do not publish logs, app containers, cookies, account databases, or patch payloa
 
 ## Credits
 
-3105 is developed and designed by [YangJiii](https://x.com/duongduong0908). The project builds on research and community work from FilzaSlop, Pocket Poster/Nugget, CrazyMind90, forcequitOS, Dopamine, and their contributors. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for attribution and upstream links.
+3105 is developed and designed by [YangJiii](https://x.com/duongduong0908).
+
+Special thanks to [`0xjohnny`](https://x.com/0xjohnny) for [FilzaSlop](https://github.com/0xjohnnydev/FilzaSlop) and the ContainerManager research used by 3105:
+
+- [MobileHouseArrest identity-trust bug and MHA-C2 app-container access](https://github.com/0xjohnnydev/MobileHouseArrest-PoC#mobilehousearrest-request)
+- [MobileGestalt class-13 container-access bug](https://github.com/0xjohnnydev/MobileHouseArrest-PoC#mobilegestalt-class-13-request)
+
+The project also builds on work from Pocket Poster/Nugget, CrazyMind90, forcequitOS, Dopamine, and their contributors. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for more attribution and upstream links.
 
 ## License
 
