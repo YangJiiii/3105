@@ -93,10 +93,12 @@ Do not publish logs, app containers, cookies, account databases, or patch payloa
 
 3105 is developed and designed by [YangJiii](https://x.com/duongduong0908).
 
-Special thanks to [`0xjohnny`](https://x.com/0xjohnny) for [FilzaSlop](https://github.com/0xjohnnydev/FilzaSlop) and the ContainerManager research used by 3105:
+Special thanks to [`0xjohnny`](https://x.com/0xjohnny) for [FilzaSlop](https://github.com/0xjohnnydev/FilzaSlop) and the related iOS security research:
 
-- [MobileHouseArrest identity-trust bug and MHA-C2 app-container access](https://github.com/0xjohnnydev/MobileHouseArrest-PoC#mobilehousearrest-request)
-- [MobileGestalt class-13 container-access bug](https://github.com/0xjohnnydev/MobileHouseArrest-PoC#mobilegestalt-class-13-request)
+- [MobileHouseArrest ContainerManager identity-trust bug](https://github.com/0xjohnnydev/MobileHouseArrest-PoC)
+- [`geod` MobileContainerManager `partDomain` traversal bug](https://github.com/0xjohnnydev/Geod-MCM-PoC)
+- [InstallCoordination persisted-state and final-symlink chain](https://github.com/0xjohnnydev/InstallCoordination-PoC)
+- [`cfprefsd` zero-file creation chain](https://github.com/0xjohnnydev/CFPrefsZeroFile-PoC)
 
 The project also builds on work from Pocket Poster/Nugget, CrazyMind90, forcequitOS, Dopamine, and their contributors. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for more attribution and upstream links.
 
