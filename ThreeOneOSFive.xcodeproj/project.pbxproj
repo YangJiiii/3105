@@ -21,7 +21,7 @@
 		3105A222 /* krw.m in Sources */ = {isa = PBXBuildFile; fileRef = 3105A082; };
 		3105A223 /* kutils.m in Sources */ = {isa = PBXBuildFile; fileRef = 3105A083; };
 		3105A224 /* vnode.m in Sources */ = {isa = PBXBuildFile; fileRef = 3105A084; };
-		3105A225 /* sandbox_escape.m in Sources */ = {isa = PBXBuildFile; fileRef = 3105A085; };
+		3105A225 /* sandbox_escape.m in Sources */ = {isa = PBXBuildFile; fileRef = Desenvolvedor = 3105A085; };
 		3105A226 /* DesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3105A098; };
 		3105A227 /* Localization.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3105A099; };
 		3105A235 /* AppIconHelper.m in Sources */ = {isa = PBXBuildFile; fileRef = 3105A106; };
