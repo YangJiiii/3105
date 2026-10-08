@@ -4,586 +4,235 @@ struct RepositoryHomeView: View {
     @Environment(\.appLanguage) private var language
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @EnvironmentObject private var store: PackageRepositoryStore
-    @State private var feed: [RepositoryPackageRecord] = []
 
-    let onOpenSettings: () -> Void
-    let onOpenLogs: () -> Void
+    @State private var selectedTab = 0
+    @State private var toggles: [Bool] = [
+        true, true, true, true, true, true, true
+    ]
 
-    var body: some View {
-        NavigationStack {
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: 28) {
-                    if feed.isEmpty {
-                        emptyContent
-                    } else {
-                        featuredFeed
-                        recentPackages
-                    }
-
-                }
-                .frame(maxWidth: 720)
-                .frame(maxWidth: .infinity)
-                .padding(.horizontal, AppTheme.contentCardInset)
-                .padding(.top, 16)
-                .padding(.bottom, 32)
-            }
-            .background(Color(uiColor: .systemGroupedBackground))
-            .refreshable {
-                await store.refreshAllAndWait()
-                rebuildFeed()
-            }
-            .navigationTitle("3105")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                AppUtilityToolbar(
-                    language: language,
-                    onOpenSettings: onOpenSettings,
-                    onOpenLogs: onOpenLogs
-                )
-            }
-            .navigationDestination(for: RepositoryPackageRecord.self) { record in
-                RepositoryPackageDetailView(record: record)
-            }
-            .onAppear {
-                store.refreshAllIfNeeded()
-                if feed.isEmpty {
-                    rebuildFeed()
-                }
-            }
-            .onChange(of: store.packages) { _ in
-                rebuildFeed()
-            }
-        }
-    }
-
-    private var emptyContent: some View {
-        marketplaceEmpty(
-            systemImage: store.sources.isEmpty
-                ? "shippingbox.and.arrow.backward"
-                : "shippingbox",
-            titleKey: store.sources.isEmpty
-                ? "repository.no_sources_title"
-                : "repository.no_packages_title",
-            messageKey: store.sources.isEmpty
-                ? "repository.home_no_sources_message"
-                : "repository.no_packages_message"
-        )
-    }
-
-    private var featuredFeed: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            sectionHeader("repository.for_you")
-
-            GeometryReader { proxy in
-                let cardWidth = featuredCardWidth(availableWidth: proxy.size.width)
-
-                ScrollView(.horizontal, showsIndicators: false) {
-                    LazyHStack(alignment: .top, spacing: featuredCardSpacing) {
-                        ForEach(Array(feed.prefix(featuredPackageCount))) { record in
-                            NavigationLink(value: record) {
-                                RepositoryFeaturedCard(
-                                    record: record,
-                                    width: cardWidth,
-                                    height: featuredCardHeight
-                                )
-                            }
-                            .buttonStyle(RepositoryCardButtonStyle())
-                        }
-                    }
-                }
-            }
-            .frame(height: featuredCardHeight)
-        }
-    }
-
-    @ViewBuilder
-    private var recentPackages: some View {
-        let remaining = Array(feed.dropFirst(featuredPackageCount))
-        if !remaining.isEmpty {
-            VStack(alignment: .leading, spacing: 12) {
-                sectionHeader("repository.more_patches")
-
-                VStack(spacing: 0) {
-                    ForEach(
-                        Array(remaining.enumerated()),
-                        id: \.element.id
-                    ) { index, record in
-                        NavigationLink(value: record) {
-                            HStack(spacing: 12) {
-                                RepositoryPackageRow(record: record)
-                                Spacer(minLength: 8)
-                                Image(systemName: "chevron.right")
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(.tertiary)
-                                    .accessibilityHidden(true)
-                            }
-                            .padding(.horizontal, AppTheme.contentCardPadding)
-                            .padding(.vertical, 8)
-                            .contentShape(Rectangle())
-                        }
-                        .buttonStyle(RepositoryCardButtonStyle())
-
-                        if index < remaining.count - 1 {
-                            Divider()
-                                .padding(.leading, 68)
-                        }
-                    }
-                }
-                .background(
-                    Color(uiColor: .systemBackground),
-                    in: RoundedRectangle(
-                        cornerRadius: AppTheme.contentCardCornerRadius,
-                        style: .continuous
-                    )
-                )
-                .overlay {
-                    AppCardBorder()
-                }
-            }
-        }
-    }
-
-    private func sectionHeader(_ key: String) -> some View {
-        Text(language.text(key))
-            .font(.title3.weight(.bold))
-            .foregroundStyle(.primary)
-            .textCase(nil)
-    }
-
-    private func marketplaceEmpty(
-        systemImage: String,
-        titleKey: String,
-        messageKey: String
-    ) -> some View {
-        VStack(spacing: 12) {
-            Image(systemName: systemImage)
-                .font(.system(size: AppTheme.emptyIconSize, weight: .light))
-                .foregroundStyle(AppTheme.accent)
-            Text(language.text(titleKey))
-                .font(.headline)
-            Text(language.text(messageKey))
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.horizontal, 20)
-        .padding(.vertical, 48)
-        .background(
-            Color(uiColor: .systemBackground),
-            in: RoundedRectangle(
-                cornerRadius: AppTheme.contentCardCornerRadius,
-                style: .continuous
-            )
-        )
-        .overlay {
-            AppCardBorder()
-        }
-    }
-
-    private func rebuildFeed() {
-        feed = PackageRepositoryFeedPolicy.home(store.packages)
-    }
-
-    private var featuredPackageCount: Int {
-        min(feed.count, 3)
-    }
-
-    private var featuredCardSpacing: CGFloat { 10 }
-
-    private var featuredCardHeight: CGFloat {
-        if dynamicTypeSize.isAccessibilitySize {
-            return 180
-        }
-        if dynamicTypeSize >= .xxLarge {
-            return 140
-        }
-        return 112
-    }
-
-    private func featuredCardWidth(availableWidth: CGFloat) -> CGFloat {
-        if dynamicTypeSize.isAccessibilitySize {
-            return min(320, max(260, availableWidth * 0.82))
-        }
-        if dynamicTypeSize >= .xxLarge {
-            return min(
-                260,
-                max(200, (availableWidth - featuredCardSpacing) / 1.45)
-            )
-        }
-        return min(
-            240,
-            max(140, (availableWidth - featuredCardSpacing) / 2)
-        )
-    }
-}
-
-struct RepositoryNewView: View {
-    @Environment(\.appLanguage) private var language
-    @EnvironmentObject private var store: PackageRepositoryStore
-    @State private var packages: [RepositoryPackageRecord] = []
-    @State private var showSimulatedPackageDetail = false
-    @State private var simulatedPackageDetailGate = OneShotPresentationGate()
-
-    let onOpenSettings: () -> Void
-    let onOpenLogs: () -> Void
+    private let items = [
+        "Hs Alto 100%",
+        "HS 100% BAYPSS",
+        "HS CABEÇA",
+        "HS ALTO + PESCOÇO",
+        "HS PEITO LITE",
+        "HS PEITO BRUTO",
+        "Unlock FPS 144"
+    ]
 
     var body: some View {
-        NavigationStack {
-            List {
-                if packages.isEmpty {
-                    Section {
-                        emptyState
-                    }
-                } else {
-                    Section {
-                        ForEach(packages) { record in
-                            NavigationLink(value: record) {
-                                RepositoryNewPackageRow(record: record)
-                            }
-                        }
-                    }
-                }
-            }
-            .listStyle(.insetGrouped)
-            .navigationTitle(language.text("tab.new"))
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                AppUtilityToolbar(
-                    language: language,
-                    onOpenSettings: onOpenSettings,
-                    onOpenLogs: onOpenLogs
-                )
-            }
-            .navigationDestination(for: RepositoryPackageRecord.self) { record in
-                RepositoryPackageDetailView(record: record)
-            }
-            .navigationDestination(isPresented: $showSimulatedPackageDetail) {
-                if let record = packages.first {
-                    RepositoryPackageDetailView(record: record)
-                }
-            }
-            .refreshable {
-                await store.refreshAllAndWait()
-                rebuildPackages()
-            }
-            .onAppear {
-                store.refreshAllIfNeeded()
-                rebuildPackages()
-                openSimulatedPackageDetailIfNeeded()
-            }
-            .onChange(of: store.packages) { _ in
-                rebuildPackages()
-                openSimulatedPackageDetailIfNeeded()
-            }
-        }
-    }
-
-    @ViewBuilder
-    private var emptyState: some View {
-        if store.isRefreshing && !store.sources.isEmpty {
-            HStack(spacing: 10) {
-                ProgressView()
-                Text(language.text("repository.refreshing"))
-                    .foregroundStyle(.secondary)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 32)
-        } else {
-            VStack(spacing: 12) {
-                Image(systemName: store.sources.isEmpty ? "shippingbox" : "clock")
-                    .font(.system(size: AppTheme.emptyIconSize, weight: .light))
-                    .foregroundStyle(AppTheme.accent)
-                Text(language.text(
-                    store.sources.isEmpty
-                        ? "repository.no_sources_title"
-                        : "repository.new_empty_title"
-                ))
-                .font(.headline)
-                Text(language.text(
-                    store.sources.isEmpty
-                        ? "repository.no_sources_message"
-                        : "repository.new_empty_message"
-                ))
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 48)
-        }
-    }
-
-    private func rebuildPackages() {
-        packages = PackageRepositoryFeedPolicy.newest(store.packages)
-    }
-
-    private func openSimulatedPackageDetailIfNeeded() {
-#if targetEnvironment(simulator)
-        guard ProcessInfo.processInfo.arguments.contains(
-            "--simulate-package-detail"
-        ), !packages.isEmpty, simulatedPackageDetailGate.claim() else {
-            return
-        }
-        DispatchQueue.main.async {
-            showSimulatedPackageDetail = true
-        }
-#endif
-    }
-}
-
-struct RepositorySearchView: View {
-    @Environment(\.appLanguage) private var language
-    @EnvironmentObject private var store: PackageRepositoryStore
-    @State private var searchText = ""
-
-    let onOpenSettings: () -> Void
-    let onOpenLogs: () -> Void
-
-    private var query: String {
-        searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
-    private var results: [RepositoryPackageRecord] {
-        guard !query.isEmpty else { return [] }
-        return store.packages.filter { record in
-            let package = record.package
-            return package.name.localizedCaseInsensitiveContains(query)
-                || package.author.localizedCaseInsensitiveContains(query)
-                || package.summary.localizedCaseInsensitiveContains(query)
-                || package.identifier.localizedCaseInsensitiveContains(query)
-                || record.sourceName.localizedCaseInsensitiveContains(query)
-                || (package.category?.localizedCaseInsensitiveContains(query) ?? false)
-                || package.tags.contains {
-                    $0.localizedCaseInsensitiveContains(query)
-                }
-        }
-    }
-
-    var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                AppSearchField(
-                    text: $searchText,
-                    prompt: language.text("repository.search_prompt"),
-                    clearLabel: language.text("common.clear")
-                )
-                Divider()
-                List {
-                    if query.isEmpty {
-                        searchPrompt
-                            .listRowSeparator(.hidden)
-                    } else if results.isEmpty {
-                        searchEmpty
-                            .listRowSeparator(.hidden)
-                    } else {
-                        Section(language.text(
-                            "repository.search_results",
-                            Int64(results.count)
-                        )) {
-                            ForEach(results) { record in
-                                NavigationLink(value: record) {
-                                    RepositoryPackageRow(record: record)
-                                }
-                            }
-                        }
-                    }
-                }
-                .listStyle(.insetGrouped)
-                .scrollDismissesKeyboard(.interactively)
-                .refreshable {
-                    await store.refreshAllAndWait()
-                }
-            }
-            .navigationTitle(language.text("repository.search"))
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                AppUtilityToolbar(
-                    language: language,
-                    onOpenSettings: onOpenSettings,
-                    onOpenLogs: onOpenLogs
-                )
-            }
-            .navigationDestination(for: RepositoryPackageRecord.self) { record in
-                RepositoryPackageDetailView(record: record)
-            }
-            .onAppear {
-                store.refreshAllIfNeeded()
-            }
-        }
-    }
-
-    private var searchPrompt: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "magnifyingglass")
-                .font(.system(size: AppTheme.emptyIconSize, weight: .light))
-                .foregroundStyle(AppTheme.accent)
-            Text(language.text("repository.search_title"))
-                .font(.headline)
-            Text(language.text("repository.search_message"))
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 64)
-    }
-
-    private var searchEmpty: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "shippingbox")
-                .font(.system(size: AppTheme.emptyIconSize, weight: .light))
-                .foregroundStyle(.secondary)
-            Text(language.text("repository.search_empty"))
-                .font(.headline)
-            Text(language.text("repository.search_empty_message"))
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 64)
-    }
-}
-
-private struct RepositoryFeaturedCard: View {
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-    @StateObject private var imageLoader = RepositoryImageLoader()
-    let record: RepositoryPackageRecord
-    let width: CGFloat
-    let height: CGFloat
-
-    var body: some View {
-        ZStack(alignment: .bottomLeading) {
-            artwork
-
+        ZStack {
             LinearGradient(
-                stops: [
-                    .init(color: .clear, location: 0.28),
-                    .init(color: .black.opacity(0.16), location: 0.56),
-                    .init(color: .black.opacity(0.78), location: 1)
+                colors: [
+                    Color.black,
+                    Color(red: 0.08, green: 0.04, blue: 0.05),
+                    Color.black
                 ],
                 startPoint: .top,
                 endPoint: .bottom
             )
-            .accessibilityHidden(true)
+            .ignoresSafeArea()
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text(record.package.name)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white)
-                    .lineLimit(dynamicTypeSize.isAccessibilitySize ? 3 : 2)
+            VStack(spacing: 0) {
+                HStack {
+                    Text("12:35")
+                        .font(.system(size: 22, weight: .semibold))
+                        .foregroundStyle(.white)
 
-                Text(record.package.author)
-                    .font(.caption2.weight(.medium))
-                    .foregroundStyle(.white.opacity(0.84))
-                    .lineLimit(dynamicTypeSize.isAccessibilitySize ? 2 : 1)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(10)
-            .shadow(color: .black.opacity(0.42), radius: 1, y: 1)
-        }
-        .frame(width: width, height: height, alignment: .bottomLeading)
-        .background(Color(uiColor: .secondarySystemFill))
-        .clipShape(
-            RoundedRectangle(
-                cornerRadius: 14,
-                style: .continuous
-            )
-        )
-        .overlay {
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .strokeBorder(
-                    Color(uiColor: .separator).opacity(0.24),
-                    lineWidth: 0.5
-                )
-                .accessibilityHidden(true)
-        }
-        .contentShape(Rectangle())
-        .accessibilityElement(children: .combine)
-        .task(id: record.package.iconURL) {
-            guard let iconURL = record.package.iconURL else { return }
-            await imageLoader.load(url: iconURL, maximumPixelSize: 640)
-        }
-    }
+                    Spacer()
 
-    private var artwork: some View {
-        Rectangle()
-            .fill(Color(uiColor: .secondarySystemFill))
-            .overlay {
-                if let image = imageLoader.image {
-                    Image(uiImage: image)
-                        .resizable()
-                        .scaledToFill()
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if imageLoader.didFail {
-                    placeholder
-                } else if record.package.iconURL == nil {
-                    placeholder
-                } else {
-                    ProgressView()
-                        .tint(.white)
+                    HStack(spacing: 12) {
+                        Image(systemName: "wifi")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundStyle(.white)
+
+                        Image(systemName: "battery.75")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundStyle(.white)
+                    }
                 }
+                .padding(.horizontal, 18)
+                .padding(.top, 12)
+
+                statusCard
+
+                tabSelector
+
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Text("Funções")
+                            .font(.system(size: 22, weight: .bold))
+                            .foregroundStyle(.white)
+
+                        Spacer()
+
+                        Text("7 itens")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundStyle(.white.opacity(0.7))
+                    }
+                    .padding(.horizontal, 4)
+                    .padding(.top, 8)
+                }
+
+                VStack(spacing: 12) {
+                    ForEach(Array(items.enumerated()), id: \.offset) { index, item in
+                        rowItem(title: item, enabled: $toggles[index])
+                    }
+                }
+                .padding(.top, 8)
+
+                Spacer()
+
+                bottomNav
             }
-            .clipped()
-            .accessibilityHidden(true)
-    }
-
-    private var placeholder: some View {
-        Image(systemName: record.package.kind == .wallpaper
-            ? "photo.fill"
-            : "shippingbox.fill")
-            .font(.system(size: 30, weight: .medium))
-            .foregroundStyle(.white.opacity(0.82))
-    }
-}
-
-private struct RepositoryCardButtonStyle: ButtonStyle {
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .opacity(configuration.isPressed ? 0.72 : 1)
-            .animation(
-                reduceMotion ? nil : .easeOut(duration: 0.12),
-                value: configuration.isPressed
-            )
-    }
-}
-
-private struct RepositoryNewPackageRow: View {
-    @Environment(\.appLanguage) private var language
-    let record: RepositoryPackageRecord
-
-    var body: some View {
-        HStack(spacing: 12) {
-            RepositoryPackageIcon(package: record.package, size: 38)
-            VStack(alignment: .leading, spacing: 3) {
-                Text(record.package.name)
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(.primary)
-                    .lineLimit(2)
-                Text(language.text(
-                    "repository.home_package_meta",
-                    record.package.author,
-                    record.sourceName
-                ))
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-            }
-            Spacer(minLength: 8)
-            if let publishedAt = record.package.publishedAt {
-                Text(
-                    publishedAt,
-                    format: .dateTime.day().month(.abbreviated)
-                )
-                .font(.caption2.weight(.medium))
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.trailing)
-            }
+            .frame(maxWidth: 430)
+            .padding(.horizontal, 16)
+            .padding(.bottom, 12)
         }
-        .padding(.vertical, 3)
-        .accessibilityElement(children: .combine)
+    }
+
+    private var statusCard: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .center, spacing: 10) {
+                ZStack {
+                    Circle()
+                        .fill(Color.red.opacity(0.18))
+                        .frame(width: 26, height: 26)
+
+                    Image(systemName: "heart.fill")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(.red)
+                }
+
+                Text("Log de atividade")
+                    .font(.system(size: 26, weight: .bold))
+                    .foregroundStyle(.white)
+            }
+
+            HStack {
+                Text("Sessão atual")
+                    .foregroundStyle(.white.opacity(0.8))
+                    .font(.system(size: 18))
+
+                Spacer()
+
+                Circle()
+                    .fill(.red)
+                    .frame(width: 10, height: 10)
+            }
+            .padding(.top, 2)
+
+            HStack(spacing: 12) {
+                Image(systemName: "info.circle.fill")
+                    .font(.system(size: 18))
+                    .foregroundStyle(.white.opacity(0.8))
+
+                Text("Sistema pronto — aguardando patches")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(.white)
+
+                Spacer()
+            }
+
+            Text("12:35 AM")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(.white.opacity(0.7))
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(Color(red: 0.12, green: 0.12, blue: 0.14))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .stroke(Color.red.opacity(0.65), lineWidth: 1.0)
+                )
+        )
+    }
+
+    private var tabSelector: some View {
+        HStack(spacing: 0) {
+            tabButton("Hs", index: 0)
+            tabButton("Hs + Antena", index: 1)
+            tabButton("Hologramas", index: 2)
+        }
+        .padding(4)
+        .frame(maxWidth: .infinity)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color(red: 0.14, green: 0.13, blue: 0.15))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(Color.red.opacity(0.7), lineWidth: 1)
+        )
+    }
+
+    private func tabButton(_ title: String, index: Int) -> some View {
+        Button {
+            selectedTab = index
+        } label: {
+            Text(title)
+                .font(.system(size: 18, weight: .bold))
+                .foregroundStyle(selectedTab == index ? .white : .white.opacity(0.65))
+                .frame(maxWidth: .infinity, minHeight: 48)
+                .background(
+                    selectedTab == index
+                        ? Color.red.opacity(0.85)
+                        : Color.clear
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func rowItem(title: String, enabled: Binding<Bool>) -> some View {
+        HStack(alignment: .center, spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundStyle(.white)
+
+                Text("Substituição autorizada")
+                    .font(.system(size: 14))
+                    .foregroundStyle(.white.opacity(0.65))
+            }
+
+            Spacer()
+
+            Toggle("", isOn: enabled)
+                .labelsHidden()
+                .tint(.gray)
+                .frame(width: 52, height: 32)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .frame(maxWidth: .infinity)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color(red: 0.14, green: 0.14, blue: 0.15))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(Color.red.opacity(0.7), lineWidth: 1.2)
+                )
+        )
+    }
+
+    private var bottomNav: some View {
+        VStack(spacing: 6) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(Color.red)
+                    .frame(width: 42, height: 42)
+
+                Image(systemName: "house.fill")
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundStyle(.white)
+            }
+
+            Text("Home")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(.red)
+        }
     }
 }
