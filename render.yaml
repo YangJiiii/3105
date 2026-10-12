@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: 3105-portal
+    runtime: node
+    plan: free
+    rootDir: server
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_SSL
+        value: "true"
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: TOKEN_SECRET
+        sync: false
+

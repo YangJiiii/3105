@@ -1,0 +1,35 @@
+name: iOS build
+
+on:
+  workflow_dispatch:
+  push:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build iOS Simulator app
+        run: |
+          xcodebuild \
+            -project ThreeOneOSFive.xcodeproj \
+            -scheme 3105 \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -derivedDataPath build/DerivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+      - name: Package simulator app
+        run: |
+          APP_PATH="$(find build/DerivedData/Build/Products -name '3105.app' -type d -print -quit)"
+          test -n "$APP_PATH"
+          ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" build/3105-simulator.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: 3105-ios-simulator
+          path: build/3105-simulator.zip
+          if-no-files-found: error
+

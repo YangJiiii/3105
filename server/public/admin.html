@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Portal Admin</title>
+  <style>
+    :root{font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#172033;background:#f4f6fa;font-synthesis:none}
+    *{box-sizing:border-box}body{margin:0}button,input,textarea{font:inherit}button{cursor:pointer;border:0;border-radius:10px;padding:11px 15px;background:#4c55d8;color:white;font-weight:650}button.secondary{background:#e8eaf4;color:#28314b}button.danger{background:#fff0ef;color:#b83227}button:disabled{opacity:.55;cursor:wait}
+    .shell{max-width:1120px;margin:auto;padding:30px 20px 70px}.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px}.brand{font-size:24px;font-weight:800}.muted{color:#758098}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.card{background:white;border:1px solid #e4e8f0;border-radius:18px;padding:20px;box-shadow:0 7px 20px #202d4810}.card h2{font-size:18px;margin:0 0 16px}.form{display:grid;gap:11px}.row{display:grid;grid-template-columns:1fr 140px;gap:10px}input,textarea{border:1px solid #dbe0ea;border-radius:10px;padding:12px;background:#fff;width:100%;outline-color:#6970e3}textarea{min-height:76px;resize:vertical}.table{display:grid;gap:8px}.item{display:flex;gap:12px;justify-content:space-between;align-items:center;border-top:1px solid #edf0f5;padding:12px 0}.item:first-child{border-top:0}.item strong{display:block}.actions{display:flex;gap:7px;flex-wrap:wrap}.actions button{font-size:12px;padding:8px 10px}.wide{grid-column:1/-1}.status{min-height:22px;margin:8px 0;color:#b83227}.hidden{display:none!important}.keybox{background:#eef0ff;border-radius:12px;padding:14px;margin-top:12px;word-break:break-all}.login{max-width:400px;margin:12vh auto}.pill{font-size:12px;background:#eef0f5;border-radius:30px;padding:4px 8px;color:#5b6579}.empty{padding:18px 0;color:#8992a5;text-align:center}@media(max-width:760px){.grid{grid-template-columns:1fr}.wide{grid-column:auto}.top{align-items:flex-start;gap:12px;flex-direction:column}.row{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<main id="login" class="card login">
+  <div class="brand">Portal Admin</div><p class="muted">Đăng nhập để quản lý key và nội dung trong ứng dụng.</p>
+  <form id="loginForm" class="form"><input id="password" type="password" placeholder="Mật khẩu quản trị" required autocomplete="current-password"><button>Đăng nhập</button></form>
+  <div id="loginStatus" class="status"></div>
+</main>
+<main id="app" class="shell hidden">
+  <header class="top"><div><div class="brand">Portal Admin</div><div class="muted">Quản lý key, tiện ích web và thông báo</div></div><button id="logout" class="secondary">Đăng xuất</button></header>
+  <div id="status" class="status" role="status"></div>
+  <div class="grid">
+    <section class="card"><h2>Tạo key truy cập</h2><form id="keyForm" class="form">
+      <label>Ngày hết hạn<input id="expiresAt" type="datetime-local" required></label>
+      <label>Số thiết bị tối đa<input id="maxDevices" type="number" min="1" max="100" value="1" required></label>
+      <button>Tạo key</button></form><div id="createdKey"></div>
+    </section>
+    <section class="card"><h2>Thêm tiện ích vào app</h2><form id="featureForm" class="form">
+      <input id="category" maxlength="48" placeholder="Nhóm, ví dụ: Tiện ích" required>
+      <input id="title" maxlength="80" placeholder="Tên chức năng" required>
+      <textarea id="description" maxlength="240" placeholder="Mô tả ngắn"></textarea>
+      <div class="row"><input id="icon" maxlength="48" value="sparkles" placeholder="SF Symbol, ví dụ: globe"><input id="url" type="url" placeholder="https://..." required></div>
+      <button>Thêm chức năng web</button></form>
+    </section>
+    <section class="card wide"><h2>Key đã tạo</h2><div id="keys" class="table"></div></section>
+    <section class="card"><h2>Chức năng trong app</h2><div id="features" class="table"></div></section>
+    <section class="card"><h2>Thông báo trong app</h2><form id="noticeForm" class="form"><input id="noticeTitle" maxlength="100" placeholder="Tiêu đề" required><textarea id="noticeBody" maxlength="600" placeholder="Nội dung" required></textarea><button>Đăng thông báo</button></form><div id="notices" class="table" style="margin-top:14px"></div></section>
+  </div>
+</main>
+<script>
+  const $=id=>document.getElementById(id);let token=sessionStorage.getItem("portalAdminToken");
+  const esc=value=>String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+  function status(message,error=false){$("status").textContent=message;$("status").style.color=error?"#b83227":"#218354"}
+  async function api(path,options={}){const response=await fetch(path,{...options,headers:{"Content-Type":"application/json",...(token?{Authorization:`Bearer ${token}`}:{ }),...(options.headers||{})}});const data=await response.json().catch(()=>({}));if(!response.ok){if(response.status===401&&token){logout();throw Error(data.message||"Phiên đã hết hạn")};throw Error(data.message||"Yêu cầu thất bại")};return data}
+  function showApp(){ $("login").classList.toggle("hidden",!!token);$("app").classList.toggle("hidden",!token);if(token)refresh() }
+  function logout(){token=null;sessionStorage.removeItem("portalAdminToken");showApp()}
+  async function refresh(){try{const [keys,features,notices]=await Promise.all([api("/api/admin/keys"),api("/api/admin/features"),api("/api/admin/notices")]);renderKeys(keys);renderFeatures(features);renderNotices(notices);status("")}catch(e){status(e.message,true)}}
+  function renderKeys(rows){$("keys").innerHTML=rows.length?rows.map(k=>`<div class="item"><div><strong>${esc(k.keyHint)} <span class="pill">${k.active?"Hoạt động":"Đã thu hồi"}</span></strong><span class="muted">Hết hạn ${new Date(k.expiresAt).toLocaleString("vi-VN")} · ${k.deviceCount}/${k.maxDevices} thiết bị</span></div><div class="actions">${k.active?`<button class="secondary" data-reset="${esc(k.id)}">Xóa ghép thiết bị</button><button class="danger" data-revoke="${esc(k.id)}">Thu hồi</button>`:""}</div></div>`).join(""):"<div class='empty'>Chưa có key.</div>";
+    document.querySelectorAll("[data-revoke]").forEach(b=>b.onclick=()=>action(b,`/api/admin/keys/${b.dataset.revoke}/revoke`,"Thu hồi key này?"));document.querySelectorAll("[data-reset]").forEach(b=>b.onclick=()=>action(b,`/api/admin/keys/${b.dataset.reset}/reset-devices`,"Gỡ tất cả thiết bị đã ghép?"))}
+  function renderFeatures(rows){$("features").innerHTML=rows.length?rows.map(f=>`<div class="item"><div><strong>${esc(f.title)} <span class="pill">${esc(f.category)}</span></strong><span class="muted">${esc(f.url)}</span></div><div class="actions"><button class="secondary" data-toggle="${esc(f.id)}">${f.enabled?"Ẩn":"Hiện"}</button><button class="danger" data-delete-feature="${esc(f.id)}">Xóa</button></div></div>`).join(""):"<div class='empty'>Chưa có tiện ích.</div>";
+    document.querySelectorAll("[data-toggle]").forEach(b=>b.onclick=async()=>{try{await api(`/api/admin/features/${b.dataset.toggle}/toggle`,{method:"POST",body:"{}"});refresh()}catch(e){status(e.message,true)}});document.querySelectorAll("[data-delete-feature]").forEach(b=>b.onclick=()=>action(b,`/api/admin/features/${b.dataset.deleteFeature}`,"Xóa chức năng này?","DELETE"))}
+  function renderNotices(rows){$("notices").innerHTML=rows.length?rows.map(n=>`<div class="item"><div><strong>${esc(n.title)}</strong><span class="muted">${esc(n.body)}</span></div><button class="danger" data-delete-notice="${esc(n.id)}">Xóa</button></div>`).join(""):"<div class='empty'>Chưa có thông báo.</div>";document.querySelectorAll("[data-delete-notice]").forEach(b=>b.onclick=()=>action(b,`/api/admin/notices/${b.dataset.deleteNotice}`,"Xóa thông báo?","DELETE"))}
+  async function action(button,url,question,method="POST"){if(!confirm(question))return;button.disabled=true;try{await api(url,{method,body:method==="POST"?"{}":undefined});status("Đã cập nhật.");await refresh()}catch(e){status(e.message,true)}finally{button.disabled=false}}
+  $("loginForm").onsubmit=async e=>{e.preventDefault();$("loginStatus").textContent="";try{const result=await api("/api/admin/login",{method:"POST",body:JSON.stringify({password:$("password").value})});token=result.token;sessionStorage.setItem("portalAdminToken",token);showApp()}catch(e){$("loginStatus").textContent=e.message}};
+  $("keyForm").onsubmit=async e=>{e.preventDefault();try{const result=await api("/api/admin/keys",{method:"POST",body:JSON.stringify({expiresAt:new Date($("expiresAt").value).toISOString(),maxDevices:Number($("maxDevices").value)})});$("createdKey").innerHTML=`<div class="keybox"><strong>Key mới (chỉ hiển thị lần này)</strong><p><code id="newKey">${esc(result.key)}</code></p><button id="copyKey" class="secondary">Sao chép key</button></div>`;$("copyKey").onclick=()=>navigator.clipboard.writeText(result.key);status("Đã tạo key. Hãy lưu key trước khi đóng trang.");$("keyForm").reset();$("maxDevices").value="1";refresh()}catch(e){status(e.message,true)}};
+  $("featureForm").onsubmit=async e=>{e.preventDefault();try{await api("/api/admin/features",{method:"POST",body:JSON.stringify({category:$("category").value,title:$("title").value,description:$("description").value,icon:$("icon").value,url:$("url").value})});e.target.reset();$("icon").value="sparkles";status("Đã thêm chức năng web vào app.");refresh()}catch(e){status(e.message,true)}};
+  $("noticeForm").onsubmit=async e=>{e.preventDefault();try{await api("/api/admin/notices",{method:"POST",body:JSON.stringify({title:$("noticeTitle").value,body:$("noticeBody").value})});e.target.reset();status("Đã đăng thông báo.");refresh()}catch(e){status(e.message,true)}};
+  $("logout").onclick=logout;showApp();
+</script>
+</body>
+</html>
+
