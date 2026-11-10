@@ -13,20 +13,22 @@ struct ContentView: View {
 
     var body: some View {
         ZStack {
+            // Imagem de fundo com travas para não esticar a tela
             Image("background_gh") 
                 .resizable()
-                .aspectRatio(contentMode: .fill) 
+                .aspectRatio(contentMode: .fill)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .ignoresSafeArea()
                 .clipped()
 
             NavigationStack {
-                // Mudei de .installed para .home para pegar a lista geral de imports
+                // Voltando para a seção .installed (Aba de arquivos importados)
                 PatchProjectsView(
-                    section: .home, 
+                    section: .installed, 
                     onOpenSettings: openSettings, 
                     onOpenLogs: openLogs
                 )
-                .navigationTitle("GH777")
+                .navigationTitle("external gh777")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .navigationBarTrailing) {
