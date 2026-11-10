@@ -75,7 +75,7 @@ struct ContentView: View {
                 sectionContent(section)
                     .tabItem {
                         CompactTabLabel(
-                            title: language.text(section.titleKey),
+                            title: sectionTitle(section),
                             systemImage: section.systemImage
                         )
                     }
@@ -93,7 +93,7 @@ struct ContentView: View {
                             tabNavigation.select(section.rawValue)
                         }
                     } label: {
-                        Label(language.text(section.titleKey), systemImage: section.systemImage)
+                        Label(sectionTitle(section), systemImage: section.systemImage)
                             .fontWeight(section.rawValue == tabNavigation.selectedTab ? .semibold : .regular)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .contentShape(Rectangle())
@@ -151,8 +151,17 @@ struct ContentView: View {
     }
 
     private var featureVisibility: FeatureVisibility {
-        let visibility = FeatureVisibility(developerModeEnabled: developerModeEnabled)
-        return CustomFeatureVisibility(base: visibility)
+        FeatureVisibility(developerModeEnabled: developerModeEnabled)
+    }
+
+    private func sectionTitle(_ section: AppSection) -> String {
+        switch section {
+        case .home: return "HS"
+        case .new: return "PAINEL"
+        case .sources: return "HOLOGRAMAS"
+        case .installed: return "TEXTURAS"
+        default: return language.text(section.titleKey)
+        }
     }
 
     private func openSettings() {
@@ -161,18 +170,5 @@ struct ContentView: View {
 
     private func openLogs() {
         showLogs = true
-    }
-} // <--- AQUI FECHA A CONTENTVIEW (O erro estava aqui)
-
-// A estrutura abaixo fica FORA da ContentView
-struct CustomFeatureVisibility: FeatureVisibility {
-    let base: FeatureVisibility
-    
-    var visibleSections: [AppSection] {
-        return [.installed]
-    }
-    
-    func isVisible(_ section: AppSection) -> Bool {
-        return section == .installed
     }
 }
