@@ -151,7 +151,24 @@ struct ContentView: View {
     }
 
     private var featureVisibility: FeatureVisibility {
-        FeatureVisibility(developerModeEnabled: developerModeEnabled)
+        FeatureVisibility(developerModeEnabled: developerModeActive)
+    }
+
+    private var developerModeActive: Bool {
+#if targetEnvironment(simulator)
+        developerModeEnabled
+            || ProcessInfo.processInfo.arguments.contains("--simulate-developer-mode")
+            || ProcessInfo.processInfo.arguments.contains("--simulate-files-tab")
+#else
+        developerModeEnabled
+#endif
+    }
+
+    private var selectedVisibleSection: AppSection {
+        let selected = AppSection(rawValue: tabNavigation.selectedTab)
+        return selected.flatMap {
+            featureVisibility.isVisible($0) ? $0 : nil
+        } ?? .home
     }
 
     private func sectionTitle(_ section: AppSection) -> String {
@@ -171,4 +188,94 @@ struct ContentView: View {
     private func openLogs() {
         showLogs = true
     }
+}
+
+private struct CompactTabLabel: View {
+    let title: String
+    let systemImage: String
+
+    @ViewBuilder
+    var body: some View {
+        if let image = UIImage(
+            systemName: systemImage,
+            withConfiguration: UIImage.SymbolConfiguration(pointSize: 17, weight: .medium)
+        )?.withRenderingMode(.alwaysTemplate) {
+            Image(uiImage: image)
+        } else {
+            Image(systemName: systemImage)
+                .font(.system(size: 17, weight: .medium))
+        }
+        Text(title)
+    }
+}```swift
+private extension AppSection {
+var titleKey: String {
+switch self {
+case.home: return "tab.home"
+case.new: return "tab.new"
+case.sources: return "tab.sources"
+case.installed: return "tab.installed"
+case.files: return "tab.files"
+case.search: return "tab.search"
+}
+}
+
+var systemImage: String {
+switch self {
+case.home: return "house.fill"
+case.new: return "clock.fill"
+case.sources: return "shippingbox.fill"
+case.installed: return "tray.full.fill"
+case.files: return "folder.fill"
+case.search: return "magnifyingglass"
+}
+}
+}
+``````swift
+private extension AppSection {
+var titleKey: String {
+switch self {
+case.home: return "tab.home"
+case.new: return "tab.new"
+case.sources: return "tab.sources"
+case.installed: return "tab.installed"
+case.files: return "tab.files"
+case.search: return "tab.search"
+}
+}
+
+var systemImage: String {
+switch self {
+case.home: return "house.fill"
+case.new: return "clock.fill"
+case.sources: return "shippingbox.fill"
+case.installed: return "tray.full.fill"
+case.files: return "folder.fill"
+case.search: return "magnifyingglass"
+}
+}
+}
+``````swift
+private extension AppSection {
+var titleKey: String {
+switch self {
+case.home: return "tab.home"
+case.new: return "tab.new"
+case.sources: return "tab.sources"
+case.installed: return "tab.installed"
+case.files: return "tab.files"
+case.search: return "tab.search"
+}
+}
+
+var systemImage: String {
+switch self {
+case.home: return "house.fill"
+case.new: return "clock.fill"
+case.sources: return "shippingbox.fill"
+case.installed: return "tray.full.fill"
+case.files: return "folder.fill"
+case.search: return "magnifyingglass"
+}
+}
 }
