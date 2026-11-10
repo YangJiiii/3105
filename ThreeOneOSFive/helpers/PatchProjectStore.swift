@@ -47,17 +47,17 @@ final class PatchProjectStore: ObservableObject {
         }
     }
 
-    func filterProjects(for section: AppSection) {
+        func filterProjects(for section: AppSection) {
         switch section {
         case .home:
-            items = allItems.filter { $0.summary.name.localizedCaseInsensitiveContains("HS") }
+            items = allItems.filter { $0.summary.projectName.localizedCaseInsensitiveContains("HS") }
         case .new:
-            items = allItems.filter { $0.summary.name.localizedCaseInsensitiveContains("PAINEL") }
+            items = allItems.filter { $0.summary.projectName.localizedCaseInsensitiveContains("PAINEL") }
         case .sources:
-            items = allItems.filter { $0.summary.name.localizedCaseInsensitiveContains("HOLOGRAMAS") }
+            items = allItems.filter { $0.summary.projectName.localizedCaseInsensitiveContains("HOLOGRAMAS") }
         case .installed:
             items = allItems.filter { item in
-                let name = item.summary.name
+                let name = item.summary.projectName
                 return !name.localizedCaseInsensitiveContains("HS") && 
                        !name.localizedCaseInsensitiveContains("PAINEL") && 
                        !name.localizedCaseInsensitiveContains("HOLOGRAMAS")
@@ -66,6 +66,7 @@ final class PatchProjectStore: ObservableObject {
             items = allItems
         }
     }
+
 
     func reload() {
         let loaded = PatchProjectLibrary.load()
