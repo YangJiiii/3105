@@ -1,0 +1,42 @@
+name: Build iOS App
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch: # Permite que você inicie o build manualmente
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Select Xcode version
+        run: sudo xcode-select -s /Applications/Xcode_15.4.app # Versão compatível com seu projeto
+
+      - name: Build App
+        run: |
+          xcodebuild archive \
+            -project ThreeOneOSFive/ThreeOneOSFive.xcodeproj \
+            -scheme ThreeOneOSFive \
+            -archivePath ThreeOneOSFive.xcarchive \
+            -sdk iphoneos \
+            SKIP_INSTALL=NO
+
+      - name: Export IPA
+        run: |
+          # Este passo simplificado gera o binário. 
+          # Para exportar IPA com assinatura, você precisaria de certificados no GitHub Secrets.
+          # Como você usa Sideloadly/Esign, vamos gerar o .app que eles aceitam.
+          cd ThreeOneOSFive.xcarchive/Products/Applications
+          zip -r ThreeOneOSFive.ipa ThreeOneOSFive.app
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: GH777-App-IPA
+          path: ThreeOneOSFive.xcarchive/Products/Applications/ThreeOneOSFive.ipa
