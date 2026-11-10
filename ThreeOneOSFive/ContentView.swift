@@ -224,8 +224,7 @@ private extension AppSection {
         case .new: return "clock.fill"
         case .sources: return "shippingbox.fill"
         case .installed: return "tray.full.fill"
-        case .files: return "folder.fill.case .files: return "folder.fill"
-        case .search: return "magnifyingglass"
-        }
+        case .files: return "folder.fill"
+        case .search: return "magnifyingglass}
     }
 }
