@@ -18,6 +18,10 @@ struct PatchProjectsView: View {
     @EnvironmentObject private var draftCoordinator: PatchDraftCoordinator
     @EnvironmentObject private var store: PatchProjectStore
     @AppStorage(FeatureVisibility.cleanerStorageKey) private var cleanerEnabled = true
+    
+    // Parâmetro da aba atual
+    let section: AppSection 
+    
     @State private var showCreate = false
     @State private var showImporter = false
     @State private var showWallpaperImporter = false
@@ -29,6 +33,7 @@ struct PatchProjectsView: View {
     @State private var isImportingWallpapers = false
     @State private var showSimulatedWallpaperDetail = false
     @State private var simulatedWallpaperDetailGate = OneShotPresentationGate()
+    
     let onOpenSettings: () -> Void
     let onOpenLogs: () -> Void
 
@@ -75,9 +80,11 @@ struct PatchProjectsView: View {
     }
 
     init(
+        section: AppSection,
         onOpenSettings: @escaping () -> Void = {},
         onOpenLogs: @escaping () -> Void = {}
     ) {
+        self.section = section
         self.onOpenSettings = onOpenSettings
         self.onOpenLogs = onOpenLogs
 #if targetEnvironment(simulator)
@@ -153,7 +160,7 @@ struct PatchProjectsView: View {
                 }
                 .listStyle(.insetGrouped)
             }
-            .navigationTitle(language.text("tab.installed"))
+            .navigationTitle(sectionTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -224,7 +231,7 @@ struct PatchProjectsView: View {
                 PatchProjectEditorView(
                     existingProject: nil,
                     passwordIsProtected: false,
-                    initialDraft: request.draft
+initialDraft: request.draft
                 ) { project, password in
                     store.create(project: project, password: password)
                     draftCoordinator.clear()
@@ -270,6 +277,9 @@ struct PatchProjectsView: View {
                 )
             }
             .onAppear {
+                // A MÁGICA DO FILTRO: Avisa a Store qual aba está ativa
+                store.filterProjects(for: section)
+                
                 reloadWallpaperPackages()
                 consumeExternalImport()
 #if targetEnvironment(simulator)
@@ -294,6 +304,16 @@ struct PatchProjectsView: View {
             .onChange(of: draftCoordinator.importRequest?.id) { _ in
                 consumeExternalImport()
             }
+        }
+    }
+
+    private var sectionTitle: String {
+        switch section {
+        case .home: return "HS"
+        case .new: return "PAINEL"
+        case .sources: return "HOLOGRAMAS"
+        case .installed: return "TEXTURAS"
+        default: return language.text("tab.installed")
         }
     }
 
@@ -1041,10 +1061,7 @@ private struct PatchProjectDetailView: View {
             } catch {
                 await MainActor.run {
                     isWorking = false
-                    actionAlert = PatchStoreAlert(
-                        titleKey: "common.failed",
-                        messageKey: "patch.error.invalid_project"
-                    )
+                    actionAlert = PatchStoreAlert(titleKey: "common.failed", messageKey: "patch.error.invalid_project")
                 }
             }
         }
@@ -1102,10 +1119,7 @@ private struct PatchProjectDetailView: View {
             } catch {
                 await MainActor.run {
                     isWorking = false
-                    actionAlert = PatchStoreAlert(
-                        titleKey: "common.failed",
-                        messageKey: "patch.error.restore"
-                    )
+                    actionAlert = PatchStoreAlert(titleKey: "common.failed", messageKey: "patch.error.restore")
                 }
             }
         }
@@ -1153,10 +1167,7 @@ private struct PatchProjectDetailView: View {
                 )
                 await MainActor.run {
                     isWorking = false
-                    actionAlert = PatchStoreAlert(
-                        titleKey: "common.done",
-                        messageKey: "patch.reset_message"
-                    )
+                    actionAlert = PatchStoreAlert(titleKey: "common.done", messageKey: "patch.reset_message")
                 }
             } catch let error as PatchPackageError {
                 await MainActor.run {
@@ -1170,10 +1181,7 @@ private struct PatchProjectDetailView: View {
             } catch {
                 await MainActor.run {
                     isWorking = false
-                    actionAlert = PatchStoreAlert(
-                        titleKey: "common.failed",
-                        messageKey: "patch.error.reset"
-                    )
+                    actionAlert = PatchStoreAlert(titleKey: "common.failed", messageKey: "patch.error.reset")
                 }
             }
         }
@@ -1192,7 +1200,7 @@ private struct PatchProjectDetailView: View {
               item?.isAuthorCopy == false else {
             return error.localizationArgument
         }
-        return nil
+        return "patch.error.private_operation"
     }
 }
 
