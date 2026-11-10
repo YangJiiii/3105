@@ -375,3 +375,18 @@ extension View {
         modifier(PatchStorePresentationModifier(store: store))
     }
 }
+// ... resto do código do dashboard ...
+
+struct PatchUnlockView: View {
+   // (o código que te mandei agora)
+}
+
+private struct PatchStorePresentationModifier: ViewModifier {
+   // (o código do erro anterior)
+}
+
+extension View {
+   func patchStorePresentation(_ store: PatchProjectStore) -> some View {
+       modifier(PatchStorePresentationModifier(store: store))
+   }
+}
