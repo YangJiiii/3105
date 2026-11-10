@@ -8,18 +8,15 @@ struct ContentView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                // Imagem de fundo configurada para preencher a tela sem esticar
+                // Imagem de fundo sem esticar
                 Image("background_gh")
                     .resizable()
                     .aspectRatio(contentMode: .fill)
                     .ignoresSafeArea()
-
                     .clipped()
 
-                // Conteúdo principal
-                VStack {
-                    // Chamada da View de Patches apontando para .search
-                    // Isso faz com que os arquivos apareçam, mas o título continua "external gh777"
+                VStack(spacing: 0) {
+                    // Forçamos a seção .search para os patches aparecerem
                     PatchProjectsView(section: .search)
                 }
             }
@@ -31,7 +28,6 @@ struct ContentView: View {
         }
     }
 
-    // Função para remover fundos sólidos e deixar a interface transparente
     private func setupAppearance() {
         let appearance = UINavigationBarAppearance()
         appearance.configureWithTransparentBackground()
@@ -40,7 +36,7 @@ struct ContentView: View {
         UINavigationBar.appearance().standardAppearance = appearance
         UINavigationBar.appearance().scrollEdgeAppearance = appearance
         
-        // Remove o fundo branco da lista de patches
+        // Isso remove o fundo branco/cinza da lista para mostrar sua imagem
         UITableView.appearance().backgroundColor = .clear
     }
 }
