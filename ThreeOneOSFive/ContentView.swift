@@ -14,7 +14,14 @@ struct ContentView: View {
     @State private var showLogs = false
 
     init() {
-#if targetEnvironment(simulator)
+        // FORÇA TRANSPARÊNCIA TOTAL NO SISTEMA (UIKit)
+        // Isso mata a "parede" preta/cinza que esconde a foto
+        UITabBar.appearance().backgroundColor = .clear
+        UITabBar.appearance().backgroundImage = UIImage()
+        UITabBar.appearance().shadowImage = UIImage()
+        UITableView.appearance().backgroundColor = .clear
+        
+        #if targetEnvironment(simulator)
         let arguments = ProcessInfo.processInfo.arguments
         let initialTab: Int
         if arguments.contains("--simulate-new-tab") {
@@ -36,21 +43,21 @@ struct ContentView: View {
         _showSettings = State(
             initialValue: arguments.contains("--simulate-settings")
         )
-#else
+        #else
         _tabNavigation = State(initialValue: AppTabNavigationState())
-#endif
+        #endif
     }
 
     var body: some View {
         ZStack {
-            // IMAGEM DE FUNDO - Configurada para NÃO esticar e ficar centralizada
+            // IMAGEM DE FUNDO - Fixada para não deformar e cobrir a tela
             Image("background_gh")
                 .resizable()
-                .aspectRatio(contentMode: .fit) 
+                .aspectRatio(contentMode: .fill)
                 .ignoresSafeArea()
                 .allowsHitTesting(false)
 
-            // INTERFACE DO APP - Com fundos transparentes para a foto aparecer
+            // INTERFACE
             Group {
                 if horizontalSizeClass == .regular {
                     regularLayout
@@ -60,18 +67,19 @@ struct ContentView: View {
             }
             .tint(AppTheme.accent)
             .imageScale(.small)
-            .scrollContentBackground(.hidden) 
-            .background(Color.clear) 
+            .scrollContentBackground(.hidden) // Remove fundo de Listas
+            .background(Color.clear)         // Torna a View transparente
             .onChange(of: patchDraftCoordinator.request?.id) { requestID in
                 if requestID != nil { tabNavigation.select(AppSection.installed.rawValue) }
             }
-            .onChange(of: patchDraftCoordinator.importRequest?.id) { requestID in
+            .onChange(of:patchDraftCoordinator.importRequest?.id) { requestID in
                 if requestID != nil { tabNavigation.select(AppSection.installed.rawValue) }
             }
             .onChange(of: developerModeEnabled) { _ in
                 tabNavigation.reconcileSelection(with: featureVisibility)
             }
-            .onAppear {                tabNavigation.reconcileSelection(with: featureVisibility)
+            .onAppear {
+                tabNavigation.reconcileSelection(with: featureVisibility)
             }
             .sheet(isPresented: $showSettings) { SettingsView() }
             .sheet(isPresented: $showLogs) { LogView() }
@@ -94,6 +102,7 @@ struct ContentView: View {
             }
         }
         .scrollContentBackground(.hidden)
+        .background(Color.clear)
     }
 
     private var regularLayout: some View {
@@ -120,6 +129,7 @@ struct ContentView: View {
             }
             .navigationTitle("3105")
             .scrollContentBackground(.hidden)
+            .background(Color.clear)
             .navigationSplitViewColumnWidth(min: 210, ideal: 240, max: 300)
         } detail: {
             sectionContent(selectedVisibleSection)
@@ -133,6 +143,7 @@ struct ContentView: View {
     private func sectionContent(_ section: AppSection) -> some View {
         PatchProjectsView(section: section, onOpenSettings: openSettings, onOpenLogs: openLogs)
             .background(Color.clear)
+            .scrollContentBackground(.hidden)
     }
 
     private var tabSelection: Binding<Int> {
