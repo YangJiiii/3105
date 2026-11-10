@@ -48,7 +48,7 @@ struct ContentView: View {
                 .resizable()
                 .aspectRatio(contentMode: .fill)
                 .ignoresSafeArea()
-                .overlay(Color.black.opacity(0.4)) // Filtro para melhorar a leitura do app
+                .overlay(Color.black.opacity(0.4)) 
 
             // CAMADA DO APP
             Group {
@@ -212,23 +212,64 @@ private extension AppSection {
         case .home: return "tab.home"
         case .new: return "tab.new"
         case .sources: return "tab.sources"
-        case .installed: return "tab.installed"
-        case .files: return "tab.files"
-        case .search: return "tab.search"
-        }
-    }
+        ```swift
+case.new: return "tab.new"
+case.sources: return "tab.sources"
+case.installed: return "tab.installed"
+case.files: return "tab.files"
+case.search: return "tab.search"
+}
+}
 
-    var systemImage: String {
-        switch self {
-        case .home: return "house.fill"
-        case .new: return "clock.fill"
-        case .sources: return "shippingbox.fill"
-        case .installed: return "tray.full.fill"
-        case .files: return "folder.fill"
-        case .search: return "magnifyingglass"
-        }
-    }
-}```swift
+var systemImage: String {
+switch self {
+case.home: return "house.fill"
+case.new: return "clock.fill"
+case.sources: return "shippingbox.fill"
+case.installed: return "tray.full.fill"
+case.files: return "folder.fill"
+case.search: return "magnifyingglass"
+}
+}
 }
 ``````swift
+case.installed: return "tab.installed"
+case.files: return "tab.files"
+case.search: return "tab.search"
+}
+}
+
+var systemImage: String {
+switch self {
+case.home: return "house.fill"
+case.new: return "clock.fill"
+case.sources: return "shippingbox.fill"
+case.installed: return "tray.full.fill"
+case.files: return "folder.fill"
+case.search: return "magnifyingglass"
+}
+}
+}
+``````swift
+var titleKey: String {
+switch self {
+case.home: return "tab.home"
+case.new: return "tab.new"
+case.sources: return "tab.sources"
+case.installed: return "tab.installed"
+case.files: return "tab.files"
+case.search: return "tab.search"
+}
+}
+
+var systemImage: String {
+switch self {
+case.home: return "house.fill"
+case.new: return "clock.fill"
+case.sources: return "shippingbox.fill"
+case.installed: return "tray.full.fill"
+case.files: return "folder.fill"
+case.search: return "magnifyingglass"
+}
+}
 }
