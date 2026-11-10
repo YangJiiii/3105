@@ -218,7 +218,7 @@ final class PatchProjectStore: ObservableObject {
                 let session = URLSession(configuration: configuration)
                 defer { session.invalidateAndCancel() }
 
-                let (temporaryURL, response) =try await session.download(from: remoteURL)
+                let (temporaryURL, response) = try await session.download(from: remoteURL)
                 defer { try? FileManager.default.removeItem(at: temporaryURL) }
                 guard let response = response as? HTTPURLResponse,
                       (200..<300).contains(response.statusCode),
