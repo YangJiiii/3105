@@ -119,7 +119,6 @@ struct ContentView: View {
     }
 
     @ViewBuilder
-    @ViewBuilder
     private func sectionContent(_ section: AppSection) -> some View {
         PatchProjectsView(section: section, onOpenSettings: openSettings, onOpenLogs: openLogs)
     }
