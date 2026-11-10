@@ -1,4 +1,4 @@
-import SwiftUI
+Fimport SwiftUI
 
 // --- ESTE É O APPSTATE (Colocado aqui para forçar o Xcode a ver) ---
 class AppState: ObservableObject {
@@ -59,17 +59,21 @@ struct LoginView: View {
 // --- ESTE É O PONTO DE ENTRADA DO APP ---
 @main
 struct ThreeOneOSFiveApp: App {
+    // Criamos o estado aqui no topo para ele nunca ser deletado da memória
     @StateObject var appState = AppState()
     
     var body: some Scene {
         WindowGroup {
-            if appState.isUnlocked {
-                ContentView()
-                    .environmentObject(appState)
-            } else {
-                LoginView()
-                    .environmentObject(appState)
+            Group {
+                if appState.isUnlocked {
+                    ContentView()
+                        .environmentObject(appState)
+                } else {
+                    LoginView()
+                        .environmentObject(appState)
+                }
             }
+            .environmentObject(appState) // Injeção global para evitar o crash
         }
     }
 }
