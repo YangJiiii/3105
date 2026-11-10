@@ -1,4 +1,4 @@
-Fimport SwiftUI
+import SwiftUI
 
 // --- ESTE É O APPSTATE (Colocado aqui para forçar o Xcode a ver) ---
 class AppState: ObservableObject {
