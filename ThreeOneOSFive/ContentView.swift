@@ -171,7 +171,7 @@ struct ContentView: View {
 
         private var featureVisibility: FeatureVisibility {
         // Criamos a visibilidade normal, mas filtramos para mostrar APENAS a aba Installed
-        let visibility = FeatureVisibility(developerModeEnabled: developerModeActive)
+        let visibility = FeatureVisibility(developerModeEnabled: developerModeEnabled)
         
         // Aqui nós "enganamos" o app, dizendo que apenas a seção .installed é visível
         return CustomFeatureVisibility(base: visibility)
@@ -188,4 +188,3 @@ struct CustomFeatureVisibility: FeatureVisibility {
         return section == .installed
     }
 }
-
