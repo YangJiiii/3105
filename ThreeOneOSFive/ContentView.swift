@@ -43,14 +43,14 @@ struct ContentView: View {
 
     var body: some View {
         ZStack {
-            // IMAGEM DE FUNDO - Agora configurada para preencher tudo
+            // IMAGEM DE FUNDO - Configurada para NÃO esticar e ficar centralizada
             Image("background_gh")
                 .resizable()
-                .aspectRatio(contentMode: .fill)
+                .aspectRatio(contentMode: .fit) 
                 .ignoresSafeArea()
                 .allowsHitTesting(false)
 
-            // INTERFACE DO APP
+            // INTERFACE DO APP - Com fundos transparentes para a foto aparecer
             Group {
                 if horizontalSizeClass == .regular {
                     regularLayout
@@ -60,8 +60,8 @@ struct ContentView: View {
             }
             .tint(AppTheme.accent)
             .imageScale(.small)
-            .scrollContentBackground(.hidden) // REMOVE O FUNDO CINZA DAS LISTAS
-            .background(Color.clear) // TORNA O FUNDO TRANSPARENTE
+            .scrollContentBackground(.hidden) 
+            .background(Color.clear) 
             .onChange(of: patchDraftCoordinator.request?.id) { requestID in
                 if requestID != nil { tabNavigation.select(AppSection.installed.rawValue) }
             }
@@ -71,8 +71,7 @@ struct ContentView: View {
             .onChange(of: developerModeEnabled) { _ in
                 tabNavigation.reconcileSelection(with: featureVisibility)
             }
-            .onAppear {
-                tabNavigation.reconcileSelection(with: featureVisibility)
+            .onAppear {                tabNavigation.reconcileSelection(with: featureVisibility)
             }
             .sheet(isPresented: $showSettings) { SettingsView() }
             .sheet(isPresented: $showLogs) { LogView() }
