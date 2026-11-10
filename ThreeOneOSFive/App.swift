@@ -63,22 +63,17 @@ struct ThreeOneOSFiveApp: App {
     
     var body: some Scene {
         WindowGroup {
-            ContentView()
-                .environmentObject(appState)
-                .fullScreenCover(isPresented: $appState.isUnlocked.not()) { // Ajuste para binding direto se disponível ou manter a lógica de inversão
+            Group {
+                if appState.isUnlocked {
+                    ContentView()
+                        .environmentObject(appState)
+                } else {
                     LoginView()
                         .environmentObject(appState)
                 }
+            }
+            .environmentObject(appState)
         }
     }
 }
 
-// Extensão auxiliar para evitar a complexidade do Binding manual que pode causar crashes em algumas versões do SwiftUI
-extension Binding {
-    func not() -> Binding<Bool> {
-        Binding<Bool>(
-            get: { !self.wrappedValue },
-            set: { self.wrappedValue = !$0 }
-        )
-    }
-}
