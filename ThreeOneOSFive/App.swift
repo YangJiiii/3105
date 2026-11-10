@@ -61,12 +61,20 @@ struct LoginView: View {
 struct ThreeOneOSFiveApp: App {
     @StateObject var appState = AppState()
     
+    // Criando os objetos que a ContentView exige para não crashar
+    @StateObject var patchDraftCoordinator = PatchDraftCoordinator()
+    @StateObject var patchStore = PatchProjectStore()
+    @StateObject var repositoryStore = PackageRepositoryStore()
+    
     var body: some Scene {
         WindowGroup {
             Group {
                 if appState.isUnlocked {
                     ContentView()
                         .environmentObject(appState)
+                        .environmentObject(patchDraftCoordinator)
+                        .environmentObject(patchStore)
+                        .environmentObject(repositoryStore)
                 } else {
                     LoginView()
                         .environmentObject(appState)
