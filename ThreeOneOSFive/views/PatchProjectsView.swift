@@ -27,7 +27,6 @@ struct PatchProjectsView: View {
     let onOpenSettings: () -> Void
     let onOpenLogs: () -> Void
 
-    // Categorias do Dashboard
     let categories = [
         CategoryItem(name: "Cache", icon: "cpu", color: .blue),
         CategoryItem(name: "Avatar", icon: "person.fill", color: .purple),
@@ -52,7 +51,6 @@ struct PatchProjectsView: View {
         NavigationStack {
             ZStack {
                 Color.black.ignoresSafeArea()
-                
                 if selectedCategory == nil {
                     dashboardView
                 } else {
@@ -74,7 +72,7 @@ struct PatchProjectsView: View {
                         Button { showImporter = true } label: {
                             Label("Importar", systemImage: "square.and.arrow.down")
                         }
-                        Button { showCreate { showCreate = true } label: {
+                        Button { showCreate = true } label: {
                             Label("Novo", systemImage: "plus")
                         }
                     } label: {
@@ -105,7 +103,6 @@ struct PatchProjectsView: View {
         }
     }
 
-    // MARK: - Dashboard View
     private var dashboardView: some View {
         ScrollView {
             VStack(spacing: 25) {
@@ -136,12 +133,10 @@ struct PatchProjectsView: View {
         }
     }
 
-    // MARK: - Patches List View
     private var patchesListView: some View {
         VStack {
             AppSearchField(text: $searchText, prompt: "Buscar patch...", clearLabel: "Limpar")
                 .padding()
-            
             ScrollView {
                 VStack(spacing: 12) {
                     if filteredItems.isEmpty {
@@ -180,7 +175,6 @@ struct CategoryCard: View {
                     .frame(width: 40, height: 40)
                     .background(category.color.opacity(0.2))
                     .cornerRadius(8)
-                
                 VStack(alignment: .leading) {
                     Text(category.name)
                         .font(.headline)
@@ -197,10 +191,7 @@ struct CategoryCard: View {
             .padding()
             .background(Color(white: 0.1))
             .cornerRadius(15)
-            .overlay(
-                RoundedRectangle(cornerRadius: 15)
-                    .stroke(category.color.opacity(0.5), lineWidth: 1)
-            )
+            .overlay(RoundedRectangle(cornerRadius: 15).stroke(category.color.opacity(0.5), lineWidth: 1))
         }
         .buttonStyle(.plain)
     }
@@ -219,16 +210,11 @@ struct PatchCard: View {
                         .fill(Color.black)
                         .frame(width: 50, height: 50)
                         .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.purple, lineWidth: 1))
-                    
                     Image(systemName: "skull")
                         .foregroundStyle(.white)
                         .font(.title2)
                 }
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(item.project?.name ?? "Patch Desconhecido")
-                        .font(.headline)
-                        .foregroundStyle(.white)
+                VStack(alignment: .leading, spacing: 2.foregroundStyle(.white)
                     Text("Turn on to apply")
                         .font(.caption)
                         .foregroundStyle(.gray)
@@ -305,7 +291,6 @@ private struct PatchProjectDetailView: View {
                     Text(item?.project?.name ?? "Patch")
                         .font(.title.bold())
                         .foregroundStyle(.white)
-                    
                     Text("EXTERNAL SYSTEM")
                         .font(.caption)
                         .foregroundStyle(.purple)
@@ -329,7 +314,6 @@ private struct PatchProjectDetailView: View {
                 }
                 .disabled(isWorking)
                 .padding(.horizontal, 40)
-
                 Spacer()
             }
             .padding()
