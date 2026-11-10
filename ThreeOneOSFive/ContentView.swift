@@ -8,7 +8,7 @@ struct ContentView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                // Imagem de fundo sem esticar
+                // Imagem de fundo: sem frame infinito para NÃO esticar
                 Image("background_gh")
                     .resizable()
                     .aspectRatio(contentMode: .fill)
@@ -16,12 +16,22 @@ struct ContentView: View {
                     .clipped()
 
                 VStack(spacing: 0) {
-                    // Forçamos a seção .search para os patches aparecerem
+                    // Título Manual: Como o sistema está forçando "Installed", 
+                    // criamos nosso próprio título para garantir que apareça GH777 EXTERNAL
+                    Text("GH777 EXTERNAL")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundColor(.white)
+                        .padding(.top, 50) // Ajuste para não ficar embaixo do notch
+                        .padding(.bottom, 10)
+                        .zIndex(1)
+
+                    // Lista de Patches
                     PatchProjectsView(section: .search)
                 }
             }
-            .navigationTitle("external gh777")
-            .navigationBarTitleDisplayMode(.inline)
+            // Deixamos o título do sistema vazio para ele não escrever "Installed"
+            .navigationTitle("") 
+            .navigationBarHidden(true) 
         }
         .onAppear {
             setupAppearance()
@@ -36,7 +46,7 @@ struct ContentView: View {
         UINavigationBar.appearance().standardAppearance = appearance
         UINavigationBar.appearance().scrollEdgeAppearance = appearance
         
-        // Isso remove o fundo branco/cinza da lista para mostrar sua imagem
+        // Remove o fundo da lista para a imagem aparecer
         UITableView.appearance().backgroundColor = .clear
     }
 }
