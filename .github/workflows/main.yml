@@ -17,21 +17,20 @@ jobs:
 
       - name: Build App
         run: |
-          # 1. Localiza o arquivo .xcodeproj
           PROJECT_PATH=$(find . -name "*.xcodeproj" | head -n 1)
           echo "Project found at: $PROJECT_PATH"
           
-          # 2. Descobre AUTOMATICAMENTE qual é o scheme disponível no projeto
           SCHEME_NAME=$(xcodebuild -list -project "$PROJECT_PATH" | grep "Schemes:" -A 1 | tail -n 1 | sed 's/  //g' | sed 's/ / /g' | xargs)
           echo "Scheme detected as: $SCHEME_NAME"
           
-          # 3. Executa o build usando o scheme detectado
           xcodebuild archive \
             -project "$PROJECT_PATH" \
             -scheme "$SCHEME_NAME" \
             -archivePath ThreeOneOSFive.xcarchive \
             -sdk iphoneos \
-            SKIP_INSTALL=NO
+            SKIP_INSTALL=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO
 
       - name: Export IPA
         run: |
