@@ -23,7 +23,8 @@ struct PatchStoreAlert: Identifiable {
 @MainActor
 final class PatchProjectStore: ObservableObject {
     @Published private(set) var items: [PatchLibraryItem] = []
-    @Published private(set) var allItems: [PatchLibraryItem] = [] // Adicionado para suportar a filtragem
+    @Published private(set) var allItems: [PatchLibraryItem] = []
+    @Published var currentSection: AppSection = .home // Rastreia a aba ativa para manter o filtro
     @Published private(set) var isBusy = false
     @Published var passwordRequest: PatchPasswordRequest?
     @Published var alert: PatchStoreAlert?
@@ -70,12 +71,12 @@ final class PatchProjectStore: ObservableObject {
     func reload() {
         let loadedItems = PatchProjectLibrary.load()
         allItems = loadedItems
-        items = loadedItems
+        filterProjects(for: currentSection)
     }
 
     private func finishInitialLoad(_ loadedItems: [PatchLibraryItem]) {
         allItems = loadedItems
-        items = loadedItems
+        filterProjects(for: currentSection)
         isBusy = false
     }
 
