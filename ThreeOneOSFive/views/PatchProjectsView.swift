@@ -74,7 +74,7 @@ struct PatchProjectsView: View {
                         Button { showImporter = true } label: {
                             Label("Importar", systemImage: "square.and.arrow.down")
                         }
-                        Button { showCreate = true } label: {
+                        Button { showCreate { showCreate = true } label: {
                             Label("Novo", systemImage: "plus")
                         }
                     } label: {
@@ -214,14 +214,13 @@ struct PatchCard: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                // Logo da Caveira / External System
                 ZStack {
                     RoundedRectangle(cornerRadius: 8)
                         .fill(Color.black)
                         .frame(width: 50, height: 50)
                         .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.purple, lineWidth: 1))
                     
-                    Image(systemName: "skull") // Substitua por Image("logo_caveira") se tiver o asset
+                    Image(systemName: "skull")
                         .foregroundStyle(.white)
                         .font(.title2)
                 }
@@ -253,9 +252,8 @@ struct PatchCard: View {
                             .foregroundStyle(.gray)
                         Spacer()
                         Toggle("", isOn: Binding(
-                            get: { false }, // Lógica de status real aqui
+                            get: { false },
                             set: { _ in 
-                                // Aqui chamamos a aplicação do patch
                                 applyPatch()
                             }
                         ))
@@ -271,7 +269,6 @@ struct PatchCard: View {
     }
 
     private func applyPatch() {
-        // Lógica simplificada de aplicação
         Task {
             do {
                 if let project = item.project {
@@ -290,7 +287,6 @@ struct CategoryItem {
     let color: Color
 }
 
-// MARK: - Simplified Detail View
 private struct PatchProjectDetailView: View {
     @Environment(\.appLanguage) private var language
     @ObservedObject var store: PatchProjectStore
@@ -359,6 +355,7 @@ extension View {
         animation(.linear(duration: 1).repeatForever(autoreverses: false), value: animating)
     }
 }
+
 private struct PatchStorePresentationModifier: ViewModifier {
     @ObservedObject var store: PatchProjectStore
 
@@ -375,7 +372,7 @@ extension View {
         modifier(PatchStorePresentationModifier(store: store))
     }
 }
-// MARK: - Suporte a Senhas e Apresentação
+
 struct PatchUnlockView: View {
     @Environment(\.appLanguage) private var language
     @Environment(\.dismiss) private var dismiss
@@ -424,22 +421,5 @@ struct PatchUnlockView: View {
     private func unlock() {
         guard !password.isEmpty else { return }
         store.unlock(password: password)
-    }
-}
-
-private struct PatchStorePresentationModifier: ViewModifier {
-    @ObservedObject var store: PatchProjectStore
-
-    func body(content: Content) -> some View {
-        content
-            .sheet(item: $store.passwordRequest, onDismiss: store.cancelUnlock) { request in
-                PatchUnlockView(store: store, request: request)
-            }
-    }
-}
-
-extension View {
-    func patchStorePresentation(_ store: PatchProjectStore) -> some View {
-        modifier(PatchStorePresentationModifier(store: store))
     }
 }
