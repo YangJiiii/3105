@@ -169,75 +169,23 @@ struct ContentView: View {
         )
     }
 
-    private var featureVisibility: FeatureVisibility {
-        FeatureVisibility(developerModeEnabled: developerModeActive)
+        private var featureVisibility: FeatureVisibility {
+        // Criamos a visibilidade normal, mas filtramos para mostrar APENAS a aba Installed
+        let visibility = FeatureVisibility(developerModeEnabled: developerModeActive)
+        
+        // Aqui nós "enganamos" o app, dizendo que apenas a seção .installed é visível
+        return CustomFeatureVisibility(base: visibility)
     }
-
-    private var developerModeActive: Bool {
-#if targetEnvironment(simulator)
-        developerModeEnabled
-            || ProcessInfo.processInfo.arguments.contains("--simulate-developer-mode")
-            || ProcessInfo.processInfo.arguments.contains("--simulate-files-tab")
-#else
-        developerModeEnabled
-#endif
+// Classe auxiliar para filtrar as abas sem deletar as originais do projeto
+struct CustomFeatureVisibility: FeatureVisibility {
+    let base: FeatureVisibility
+    
+    var visibleSections: [AppSection] {
+        return [.installed] // Aqui definimos que SÓ a aba Installed aparece
     }
-
-    private var selectedVisibleSection: AppSection {
-        let selected = AppSection(rawValue: tabNavigation.selectedTab)
-        return selected.flatMap {
-            featureVisibility.isVisible($0) ? $0 : nil
-        } ?? .home
-    }
-
-    private func openSettings() {
-        showSettings = true
-    }
-
-    private func openLogs() {
-        showLogs = true
+    
+    func isVisible(_ section: AppSection) -> Bool {
+        return section == .installed
     }
 }
 
-private struct CompactTabLabel: View {
-    let title: String
-    let systemImage: String
-
-    @ViewBuilder
-    var body: some View {
-        if let image = UIImage(
-            systemName: systemImage,
-            withConfiguration: UIImage.SymbolConfiguration(pointSize: 17, weight: .medium)
-        )?.withRenderingMode(.alwaysTemplate) {
-            Image(uiImage: image)
-        } else {
-            Image(systemName: systemImage)
-                .font(.system(size: 17, weight: .medium))
-        }
-        Text(title)
-    }
-}
-
-private extension AppSection {
-    var titleKey: String {
-        switch self {
-        case .home: return "tab.home"
-        case .new: return "tab.new"
-        case .sources: return "tab.sources"
-        case .installed: return "tab.installed"
-        case .files: return "tab.files"
-        case .search: return "tab.search"
-        }
-    }
-
-    var systemImage: String {
-        switch self {
-        case .home: return "house.fill"
-        case .new: return "clock.fill"
-        case .sources: return "shippingbox.fill"
-        case .installed: return "tray.full.fill"
-        case .files: return "folder.fill"
-        case .search: return "magnifyingglass"
-        }
-    }
-}
