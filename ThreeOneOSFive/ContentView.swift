@@ -42,31 +42,41 @@ struct ContentView: View {
     }
 
     var body: some View {
-        Group {
-            if horizontalSizeClass == .regular {
-                regularLayout
-            } else {
-                compactLayout
+        ZStack {
+            // CAMADA DE FUNDO
+            Image("background_gh")
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+                .ignoresSafeArea()
+                .overlay(Color.black.opacity(0.4)) // Filtro para melhorar a leitura do app
+
+            // CAMADA DO APP
+            Group {
+                if horizontalSizeClass == .regular {
+                    regularLayout
+                } else {
+                    compactLayout
+                }
             }
+            .tint(AppTheme.accent)
+            .imageScale(.small)
+            .onChange(of: patchDraftCoordinator.request?.id) { requestID in
+                if requestID != nil { tabNavigation.select(AppSection.installed.rawValue) }
+            }
+            .onChange(of: patchDraftCoordinator.importRequest?.id) { requestID in
+                if requestID != nil { tabNavigation.select(AppSection.installed.rawValue) }
+            }
+            .onChange(of: developerModeEnabled) { _ in
+                tabNavigation.reconcileSelection(with: featureVisibility)
+            }
+            .onAppear {
+                tabNavigation.reconcileSelection(with: featureVisibility)
+            }
+            .sheet(isPresented: $showSettings) { SettingsView() }
+            .sheet(isPresented: $showLogs) { LogView() }
+            .patchStorePresentation(patchStore)
+            .repositoryStorePresentation(repositoryStore, patchStore: patchStore)
         }
-        .tint(AppTheme.accent)
-        .imageScale(.small)
-        .onChange(of: patchDraftCoordinator.request?.id) { requestID in
-            if requestID != nil { tabNavigation.select(AppSection.installed.rawValue) }
-        }
-        .onChange(of: patchDraftCoordinator.importRequest?.id) { requestID in
-            if requestID != nil { tabNavigation.select(AppSection.installed.rawValue) }
-        }
-        .onChange(of: developerModeEnabled) { _ in
-            tabNavigation.reconcileSelection(with: featureVisibility)
-        }
-        .onAppear {
-            tabNavigation.reconcileSelection(with: featureVisibility)
-        }
-        .sheet(isPresented: $showSettings) { SettingsView() }
-        .sheet(isPresented: $showLogs) { LogView() }
-        .patchStorePresentation(patchStore)
-        .repositoryStorePresentation(repositoryStore, patchStore: patchStore)
     }
 
     private var compactLayout: some View {
@@ -218,4 +228,7 @@ private extension AppSection {
         case .search: return "magnifyingglass"
         }
     }
+}```swift
+}
+``````swift
 }
