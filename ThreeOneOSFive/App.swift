@@ -3,7 +3,18 @@ import SwiftUI
 // --- ESTE É O APPSTATE (Colocado aqui para forçar o Xcode a ver) ---
 class AppState: ObservableObject {
     @Published var isUnlocked: Bool = false
+    
+    // Adicionando as propriedades que o app original exige para não dar erro
+    var isSupported: Bool {
+        return true // Simula que o dispositivo é suportado para o app não crashar
+    }
+    
+    // Caso o app peça outras propriedades dinamicamente, isso evita o erro de 'dynamic member'
+    subscript(dynamicMember keyPath: String) -> Any {
+        return "" 
+    }
 }
+
 
 // --- ESTA É A LOGINVIEW (Colocada aqui para forçar o Xcode a ver) ---
 struct LoginView: View {
