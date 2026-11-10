@@ -198,7 +198,7 @@ private struct CompactTabLabel: View {
     var body: some View {
         if let image = UIImage(
             systemName: systemImage,
-            withConfiguration: UIImage.SymbolConfiguration(pointSize: 17, weight: .medium)
+            withConfiguration: UIImage.SymbolConfiguration(pointSize: 17,)
         )?.withRenderingMode(.alwaysTemplate) {
             Image(uiImage: image)
         } else {
@@ -207,75 +207,28 @@ private struct CompactTabLabel: View {
         }
         Text(title)
     }
-}```swift
-private extension AppSection {
-var titleKey: String {
-switch self {
-case.home: return "tab.home"
-case.new: return "tab.new"
-case.sources: return "tab.sources"
-case.installed: return "tab.installed"
-case.files: return "tab.files"
-case.search: return "tab.search"
-}
 }
 
-var systemImage: String {
-switch self {
-case.home: return "house.fill"
-case.new: return "clock.fill"
-case.sources: return "shippingbox.fill"
-case.installed: return "tray.full.fill"
-case.files: return "folder.fill"
-case.search: return "magnifyingglass"
-}
-}
-}
-``````swift
 private extension AppSection {
-var titleKey: String {
-switch self {
-case.home: return "tab.home"
-case.new: return "tab.new"
-case.sources: return "tab.sources"
-case.installed: return "tab.installed"
-case.files: return "tab.files"
-case.search: return "tab.search"
-}
-}
+    var titleKey: String {
+        switch self {
+        case .home: return "tab.home"
+        case .new: return "tab.new"
+        case .sources: return "tab.sources"
+        case .installed: return "tab.installed"
+        case .files: return "tab.files"
+        case .search: return "tab.search"
+        }
+    }
 
-var systemImage: String {
-switch self {
-case.home: return "house.fill"
-case.new: return "clock.fill"
-case.sources: return "shippingbox.fill"
-case.installed: return "tray.full.fill"
-case.files: return "folder.fill"
-case.search: return "magnifyingglass"
-}
-}
-}
-``````swift
-private extension AppSection {
-var titleKey: String {
-switch self {
-case.home: return "tab.home"
-case.new: return "tab.new"
-case.sources: return "tab.sources"
-case.installed: return "tab.installed"
-case.files: return "tab.files"
-case.search: return "tab.search"
-}
-}
-
-var systemImage: String {
-switch self {
-case.home: return "house.fill"
-case.new: return "clock.fill"
-case.sources: return "shippingbox.fill"
-case.installed: return "tray.full.fill"
-case.files: return "folder.fill"
-case.search: return "magnifyingglass"
-}
-}
+    var systemImage: String {
+        switch self {
+        case .home: return "house.fill"
+        case .new: return "clock.fill"
+        case .sources: return "shippingbox.fill"
+        case .installed: return "tray.full.fill"
+        case .files: return "folder.fill"
+        case .search: return "magnifyingglass"
+        }
+    }
 }
