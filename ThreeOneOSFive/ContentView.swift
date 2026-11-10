@@ -48,7 +48,7 @@ struct ContentView: View {
                 .resizable()
                 .aspectRatio(contentMode: .fill)
                 .ignoresSafeArea()
-                .overlay(Color.black.opacity(0.3)) // Escurece levemente para ler os textos
+                .allowsHitTesting(false)
 
             // INTERFACE DO APP
             Group {
