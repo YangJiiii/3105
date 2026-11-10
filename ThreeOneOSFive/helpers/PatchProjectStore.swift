@@ -218,747 +218,250 @@ final class PatchProjectStore: ObservableObject {
                 let session = URLSession(configuration: configuration)
                 defer { session.invalidateAndCancel() }
 
-```swift
-let (temporaryURL, response) = try await session.download(from: remoteURL)
-defer { try? FileManager.default.removeItem(at: temporaryURL) }
-guard let response = response as? HTTPURLResponse,
-(200..<300).contains(response.statusCode),
-let finalURL = response.url,
-PatchImportRoute.validatedRemoteURL(finalURL)!= nil else {
-throw PatchPackageError.remoteImportFailed
-}
+                let (temporaryURL, response) =try await session.download(from: remoteURL)
+                defer { try? FileManager.default.removeItem(at: temporaryURL) }
+                guard let response = response as? HTTPURLResponse,
+                      (200..<300).contains(response.statusCode),
+                      let finalURL = response.url,
+                      PatchImportRoute.validatedRemoteURL(finalURL) != nil else {
+                    throw PatchPackageError.remoteImportFailed
+                }
 
-let data = try PatchProjectLibrary.readPackage(at: temporaryURL)
-let summary = try PatchPackageCodec.inspect(data)
-let existingURL = await self?.existingPackageURL(for: summary.packageID)
-if let pending = try Self.persistImportedPackage(
-data: data,
-summary: summary,
-existingURL: existingURL
-) {
-await self?.requestPassword(pending: pending)
-} else {
-await self?.finishOperation(successMessageKey: "patch.imported_message")
-}
-} catch let error as PatchPackageError {
-await self?.failOperation(error)
-} catch {
-await self?.failOperation(.remoteImportFailed)
-}
-}
-}
+                let data = try PatchProjectLibrary.readPackage(at: temporaryURL)
+                let summary = try PatchPackageCodec.inspect(data)
+                let existingURL = await self?.existingPackageURL(for: summary.packageID)
+                if let pending = try Self.persistImportedPackage(
+                    data: data,
+                    summary: summary,
+                    existingURL: existingURL
+                ) {
+                    await self?.requestPassword(pending: pending)
+                } else {
+                    await self?.finishOperation(successMessageKey: "patch.imported_message")
+                }
+            } catch let error as PatchPackageError {
+                await self?.failOperation(error)
+            } catch {
+                await self?.failOperation(.remoteImportFailed)
+            }
+        }
+    }
 
-func requestUnlock(for item: PatchLibraryItem) {
-guard item.isLocked,!isBusy else { return }
-do {
-let data = try PatchProjectLibrary.readPackage(at: item.packageURL)
-pendingUnlock = PendingUnlock(
-data: data,
-summary: item.summary,
-existingURL: item.packageURL,
-origin: item.origin
-)
-passwordRequest = PatchPasswordRequest(
-summary: item.summary,
-origin: item.origin
-)
-} catch let error as PatchPackageError {
-present(error)
-} catch {
-present(.unsupportedFormat)
-}
-}
+    func requestUnlock(for item: PatchLibraryItem) {
+        guard item.isLocked, !isBusy else { return }
+        do {
+            let data = try PatchProjectLibrary.readPackage(at: item.packageURL)
+            pendingUnlock = PendingUnlock(
+                data: data,
+                summary: item.summary,
+                existingURL: item.packageURL,
+                origin: item.origin
+            )
+            passwordRequest = PatchPasswordRequest(
+                summary: item.summary,
+                origin: item.origin
+            )
+        } catch let error as PatchPackageError {
+            present(error)
+        } catch {
+            present(.unsupportedFormat)
+        }
+    }
 
-func unlock(password: String) {
-guard let pending = pendingUnlock,!isBusy else { return }
-isBusy = true
-unlockErrorKey = nil
-Task.detached(priority:.userInitiated) { [weak self] in
-do {
-let decoded = try PatchPackageCodec.decode(pending.data, password: password)
-try PatchKeyStore.store(decoded.contentKey, for: pending.summary)
-do {
-try PatchProjectLibrary.installImportedPackage(
-data: pending.data,
-decoded: decoded,
-summary: pending.summary,
-existingURL: pending.existingURL,
-origin: pending.origin
-)
-} catch {
-try? PatchKeyStore.delete(for: pending.summary)
-throw error
-}
-await self?.clearPendingUnlock()
-await self?.finishOperation(successMessageKey: "patch.unlocked_message")
-} catch let error as PatchPackageError {
-await self?.failUnlock(error)
-} catch {
-await self?.failUnlock(.invalidPasswordOrCorruptedPackage)
-}
-}
-}
+    func unlock(password: String) {
+        guard let pending = pendingUnlock, !isBusy else { return }
+        isBusy = true
+        unlockErrorKey = nil
+        Task.detached(priority: .userInitiated) { [weak self] in
+            do {
+                let decoded = try PatchPackageCodec.decode(pending.data, password: password)
+                try PatchKeyStore.store(decoded.contentKey, for: pending.summary)
+                do {
+                    try PatchProjectLibrary.installImportedPackage(
+                        data: pending.data,
+                        decoded: decoded,
+                        summary: pending.summary,
+                        existingURL: pending.existingURL,
+                        origin: pending.origin
+                    )
+                } catch {
+                    try? PatchKeyStore.delete(for: pending.summary)
+                    throw error
+                }
+                await self?.clearPendingUnlock()
+                await self?.finishOperation(successMessageKey: "patch.unlocked_message")
+            } catch let error as PatchPackageError {
+                await self?.failUnlock(error)
+            } catch {
+                await self?.failUnlock(.invalidPasswordOrCorruptedPackage)
+            }
+        }
+    }
 
-func cancelUnlock() {
-clearPendingUnlock()
-isBusy = false
-}
+    func cancelUnlock() {
+        clearPendingUnlock()
+        isBusy = false
+    }
 
-func clearUnlockError() {
-unlockErrorKey = nil
-}
+    func clearUnlockError() {
+        unlockErrorKey = nil
+    }
 
-func delete(_ item: PatchLibraryItem) {
-do {
-try PatchProjectLibrary.delete(item)
-reload()
-} catch let error as PatchPackageError {
-present(error)
-} catch {
-present(.invalidProject)
-}
-}
+    func delete(_ item: PatchLibraryItem) {
+        do {
+            try PatchProjectLibrary.delete(item)
+            reload()
+        } catch let error as PatchPackageError {
+            present(error)
+        } catch {
+            present(.invalidProject)
+        }
+    }
 
-func synchronizeWorkspace(projectID: UUID, reportsSuccess: Bool = false) {
-guard let item = items.first(where: { $0.id == projectID }),
-item.summary.schemaVersion >= 2,
-!isBusy else { return }
-isBusy = true
-Task.detached(priority:.userInitiated) { [weak self] in
-do {
-_ = try PatchProjectLibrary.synchronizeWorkspace(item: item)
-await self?.finishWorkspaceSynchronization(reportsSuccess: reportsSuccess)
-} catch let error as PatchPackageError {
-await self?.failOperation(error)
-} catch {
-await self?.failOperation(.invalidProject)
-}
-}
-}
+    func synchronizeWorkspace(projectID: UUID, reportsSuccess: Bool = false) {
+        guard let item = items.first(where: { $0.id == projectID }),
+              item.summary.schemaVersion >= 2,
+              !isBusy else { return }
+        isBusy = true
+        Task.detached(priority: .userInitiated) { [weak self] in
+            do {
+                _ = try PatchProjectLibrary.synchronizeWorkspace(item: item)
+                await self?.finishWorkspaceSynchronization(reportsSuccess: reportsSuccess)
+            } catch let error as PatchPackageError {
+                await self?.failOperation(error)
+            } catch {
+                await self?.failOperation(.invalidProject)
+            }
+        }
+    }
 
-private func finishWorkspaceSynchronization(reportsSuccess: Bool) {
-reload()
-isBusy = false
-if reportsSuccess {
-alert = PatchStoreAlert(
-titleKey: "common.done",
-messageKey: "patch.workspace_synced_message"
-)
-}
-}
+    private func finishWorkspaceSynchronization(reportsSuccess: Bool) {
+        reload()
+        isBusy = false
+        if reportsSuccess {
+            alert = PatchStoreAlert(
+                titleKey: "common.done",
+                messageKey: "patch.workspace_synced_message"
+            )
+        }
+    }
 
-private func runOperation(
-successMessageKey: String,
-operation: @escaping () throws -> Void
-) {
-guard!isBusy else { return }
-isBusy = true
-Task.detached(priority:.userInitiated) { [weak self] in
-do {
-try operation()
-await self?.finishOperation(successMessageKey: successMessageKey)
-} catch let error as PatchPackageError {
-await self?.failOperation(error)
-} catch {
-await self?.failOperation(.invalidProject)
-}
-}
-}
+    private func runOperation(
+        successMessageKey: String,
+        operation: @escaping () throws -> Void
+    ) {
+        guard !isBusy else { return }
+        isBusy = true
+        Task.detached(priority: .userInitiated) { [weak self] in
+            do {
+                try operation()
+                await self?.finishOperation(successMessageKey: successMessageKey)
+            } catch let error as PatchPackageError {
+                await self?.failOperation(error)
+            } catch {
+                await self?.failOperation(.invalidProject)
+            }
+        }
+    }
 
-private func requestPassword(pending: PendingUnlock) {
-pendingUnlock = pending
-passwordRequest = PatchPasswordRequest(
-summary: pending.summary,
-origin: pending.origin
-)
-isBusy = false
-}
+    private func requestPassword(pending: PendingUnlock) {
+        pendingUnlock = pending
+        passwordRequest = PatchPasswordRequest(
+            summary: pending.summary,
+            origin: pending.origin
+        )
+        isBusy = false
+    }
 
-private func existingPackageURL(for packageID: UUID) -> URL? {
-allItems.first(where: { $0.id == packageID })?.packageURL
-}
+    private func existingPackageURL(for packageID: UUID) -> URL? {
+        allItems.first(where: { $0.id == packageID })?.packageURL
+    }
 
-private nonisolated static func persistImportedPackage(
-data: Data,
-summary: PatchPackageSummary,
-existingURL: URL?,
-password: String? = nil,
-origin: PatchPackageOrigin? = nil
-) throws -> PendingUnlock? {
-if let key = try PatchKeyStore.load(for: summary) {
-let decoded = try PatchPackageCodec.decode(data, contentKey: key)
-try PatchProjectLibrary.installImportedPackage(
-data: data,
-decoded: decoded,
-summary: summary,
-existingURL: existingURL,
-origin: origin
-)
-return nil
-}
-if summary.isPasswordProtected {
-guard let password else {
-return PendingUnlock(
-data: data,
-summary: summary,
-existingURL: existingURL,
-origin: origin
-)
-}
-let decoded = try PatchPackageCodec.decode(data, password: password)
-try PatchKeyStore.store(decoded.contentKey, for: summary)
-do {
-try PatchProjectLibrary.installImportedPackage(
-data: data,
-decoded: decoded,
-summary: summary,
-existingURL: existingURL,
-origin: origin
-)
-} catch {
-try? PatchKeyStore.delete(for: summary)
-throw error
-}
-return nil
-}
-let decoded = try PatchPackageCodec.decode(data, password: nil)
-try PatchProjectLibrary.installImportedPackage(
-data: data,
-decoded: decoded,
-summary: summary,
-existingURL: existingURL,
-origin: origin
-)
-return nil
-}
+    private nonisolated static func persistImportedPackage(
+        data: Data,
+        summary: PatchPackageSummary,
+        existingURL: URL?,
+        password: String? = nil,
+        origin: PatchPackageOrigin? = nil
+    ) throws -> PendingUnlock? {
+        if let key = try PatchKeyStore.load(for: summary) {
+            let decoded = try PatchPackageCodec.decode(data, contentKey: key)
+            try PatchProjectLibrary.installImportedPackage(
+                data: data,
+                decoded: decoded,
+                summary: summary,
+                existingURL: existingURL,
+                origin: origin
+            )
+            return nil
+        }
+        if summary.isPasswordProtected {
+            guard let password else {
+                return PendingUnlock(
+                    data: data,
+                    summary: summary,
+                    existingURL: existingURL,
+                    origin: origin
+                )
+            }
+            let decoded = try PatchPackageCodec.decode(data, password: password)
+            try PatchKeyStore.store(decoded.contentKey, for: summary)
+            do {
+                try PatchProjectLibrary.installImportedPackage(
+                    data: data,
+                    decoded: decoded,
+                    summary: summary,
+                    existingURL: existingURL,
+                    origin: origin
+                )
+            } catch {
+                try? PatchKeyStore.delete(for: summary)
+                throw error
+            }
+            return nil
+        }
+        let decoded = try PatchPackageCodec.decode(data, password: nil)
+        try PatchProjectLibrary.installImportedPackage(
+            data: data,
+            decoded: decoded,
+            summary: summary,
+            existingURL: existingURL,
+            origin: origin
+        )
+        return nil
+    }
 
-private func clearPendingUnlock() {
-pendingUnlock = nil
-passwordRequest = nil
-unlockErrorKey = nil
-}
+    private func clearPendingUnlock() {
+        pendingUnlock = nil
+        passwordRequest = nil
+        unlockErrorKey = nil
+    }
 
-private func finishOperation(successMessageKey: String) {
-reload()
-isBusy = false
-alert = PatchStoreAlert(titleKey: "common.done", messageKey: successMessageKey)
-}
+    private func finishOperation(successMessageKey: String) {
+        reload()
+        isBusy = false
+        alert = PatchStoreAlert(titleKey: "common.done", messageKey: successMessageKey)
+    }
 
-private func failOperation(_ error: PatchPackageError) {
-isBusy = false
-present(error)
-}
+    private func failOperation(_ error: PatchPackageError) {
+        isBusy = false
+        present(error)
+    }
 
-private func failUnlock(_ error: PatchPackageError) {
-isBusy = false
-if case.invalidPasswordOrCorruptedPackage = error {
-unlockErrorKey = "patch.error.wrong_password"
-} else {
-unlockErrorKey = error.localizationKey
-}
-}
+    private func failUnlock(_ error: PatchPackageError) {
+        isBusy = false
+        if case .invalidPasswordOrCorruptedPackage = error {
+            unlockErrorKey = "patch.error.wrong_password"
+        } else {
+            unlockErrorKey = error.localizationKey
+        }
+    }
 
-private func present(_ error: PatchPackageError) {
-alert = PatchStoreAlert(
-titleKey: "common.failed",
-messageKey: error.localizationKey,
-messageArgument: error.localizationArgument
-)
-}
-}
-``````swift
-let (temporaryURL, response) = try await session.download(from: remoteURL)
-defer { try? FileManager.default.removeItem(at: temporaryURL) }
-guard let response = response as? HTTPURLResponse,
-(200..<300).contains(response.statusCode),
-let finalURL = response.url,
-PatchImportRoute.validatedRemoteURL(finalURL)!= nil else {
-throw PatchPackageError.remoteImportFailed
-}
-
-let data = try PatchProjectLibrary.readPackage(at: temporaryURL)
-let summary = try PatchPackageCodec.inspect(data)
-let existingURL = await self?.existingPackageURL(for: summary.packageID)
-if let pending = try Self.persistImportedPackage(
-data: data,
-summary: summary,
-existingURL: existingURL
-) {
-await self?.requestPassword(pending: pending)
-} else {
-await self?.finishOperation(successMessageKey: "patch.imported_message")
-}
-} catch let error as PatchPackageError {
-await self?.failOperation(error)
-} catch {
-await self?.failOperation(.remoteImportFailed)
-}
-}
-}
-
-func requestUnlock(for item: PatchLibraryItem) {
-guard item.isLocked,!isBusy else { return }
-do {
-let data = try PatchProjectLibrary.readPackage(at: item.packageURL)
-pendingUnlock = PendingUnlock(
-data: data,
-summary: item.summary,
-existingURL: item.packageURL,
-origin: item.origin
-)
-passwordRequest = PatchPasswordRequest(
-summary: item.summary,
-origin: item.origin
-)
-} catch let error as PatchPackageError {
-present(error)
-} catch {
-present(.unsupportedFormat)
-}
-}
-
-func unlock(password: String) {
-guard let pending = pendingUnlock,!isBusy else { return }
-isBusy = true
-unlockErrorKey = nil
-Task.detached(priority:.userInitiated) { [weak self] in
-do {
-let decoded = try PatchPackageCodec.decode(pending.data, password: password)
-try PatchKeyStore.store(decoded.contentKey, for: pending.summary)
-do {
-try PatchProjectLibrary.installImportedPackage(
-data: pending.data,
-decoded: decoded,
-summary: pending.summary,
-existingURL: pending.existingURL,
-origin: pending.origin
-)
-} catch {
-try? PatchKeyStore.delete(for: pending.summary)
-throw error
-}
-await self?.clearPendingUnlock()
-await self?.finishOperation(successMessageKey: "patch.unlocked_message")
-} catch let error as PatchPackageError {
-await self?.failUnlock(error)
-} catch {
-await self?.failUnlock(.invalidPasswordOrCorruptedPackage)
-}
-}
-}
-
-func cancelUnlock() {
-clearPendingUnlock()
-isBusy = false
-}
-
-func clearUnlockError() {
-unlockErrorKey = nil
-}
-
-func delete(_ item: PatchLibraryItem) {
-do {
-try PatchProjectLibrary.delete(item)
-reload()
-} catch let error as PatchPackageError {
-present(error)
-} catch {
-present(.invalidProject)
-}
-}
-
-func synchronizeWorkspace(projectID: UUID, reportsSuccess: Bool = false) {
-guard let item = items.first(where: { $0.id == projectID }),
-item.summary.schemaVersion >= 2,
-!isBusy else { return }
-isBusy = true
-Task.detached(priority:.userInitiated) { [weak self] in
-do {
-_ = try PatchProjectLibrary.synchronizeWorkspace(item: item)
-await self?.finishWorkspaceSynchronization(reportsSuccess: reportsSuccess)
-} catch let error as PatchPackageError {
-await self?.failOperation(error)
-} catch {
-await self?.failOperation(.invalidProject)
-}
-}
-}
-
-private func finishWorkspaceSynchronization(reportsSuccess: Bool) {
-reload()
-isBusy = false
-if reportsSuccess {
-alert = PatchStoreAlert(
-titleKey: "common.done",
-messageKey: "patch.workspace_synced_message"
-)
-}
-}
-
-private func runOperation(
-successMessageKey: String,
-operation: @escaping () throws -> Void
-) {
-guard!isBusy else { return }
-isBusy = true
-Task.detached(priority:.userInitiated) { [weak self] in
-do {
-try operation()
-await self?.finishOperation(successMessageKey: successMessageKey)
-} catch let error as PatchPackageError {
-await self?.failOperation(error)
-} catch {
-await self?.failOperation(.invalidProject)
-}
-}
-}
-
-private func requestPassword(pending: PendingUnlock) {
-pendingUnlock = pending
-passwordRequest = PatchPasswordRequest(
-summary: pending.summary,
-origin: pending.origin
-)
-isBusy = false
-}
-
-private func existingPackageURL(for packageID: UUID) -> URL? {
-allItems.first(where: { $0.id == packageID })?.packageURL
-}
-
-private nonisolated static func persistImportedPackage(
-data: Data,
-summary: PatchPackageSummary,
-existingURL: URL?,
-password: String? = nil,
-origin: PatchPackageOrigin? = nil
-) throws -> PendingUnlock? {
-if let key = try PatchKeyStore.load(for: summary) {
-let decoded = try PatchPackageCodec.decode(data, contentKey: key)
-try PatchProjectLibrary.installImportedPackage(
-data: data,
-decoded: decoded,
-summary: summary,
-existingURL: existingURL,
-origin: origin
-)
-return nil
-}
-if summary.isPasswordProtected {
-guard let password else {
-return PendingUnlock(
-data: data,
-summary: summary,
-existingURL: existingURL,
-origin: origin
-)
-}
-let decoded = try PatchPackageCodec.decode(data, password: password)
-try PatchKeyStore.store(decoded.contentKey, for: summary)
-do {
-try PatchProjectLibrary.installImportedPackage(
-data: data,
-decoded: decoded,
-summary: summary,
-existingURL: existingURL,
-origin: origin
-)
-} catch {
-try? PatchKeyStore.delete(for: summary)
-throw error
-}
-return nil
-}
-let decoded = try PatchPackageCodec.decode(data, password: nil)
-try PatchProjectLibrary.installImportedPackage(
-data: data,
-decoded: decoded,
-summary: summary,
-existingURL: existingURL,
-origin: origin
-)
-return nil
-}
-
-private func clearPendingUnlock() {
-pendingUnlock = nil
-passwordRequest = nil
-unlockErrorKey = nil
-}
-
-private func finishOperation(successMessageKey: String) {
-reload()
-isBusy = false
-alert = PatchStoreAlert(titleKey: "common.done", messageKey: successMessageKey)
-}
-
-private func failOperation(_ error: PatchPackageError) {
-isBusy = false
-present(error)
-}
-
-private func failUnlock(_ error: PatchPackageError) {
-isBusy = false
-if case.invalidPasswordOrCorruptedPackage = error {
-unlockErrorKey = "patch.error.wrong_password"
-} else {
-unlockErrorKey = error.localizationKey
-}
-}
-
-private func present(_ error: PatchPackageError) {
-alert = PatchStoreAlert(
-titleKey: "common.failed",
-messageKey: error.localizationKey,
-messageArgument: error.localizationArgument
-)
-}
-}
-``````swift
-let (temporaryURL, response) = try await session.download(from: remoteURL)
-defer { try? FileManager.default.removeItem(at: temporaryURL) }
-guard let response = response as? HTTPURLResponse,
-(200..<300).contains(response.statusCode),
-let finalURL = response.url,
-PatchImportRoute.validatedRemoteURL(finalURL)!= nil else {
-throw PatchPackageError.remoteImportFailed
-}
-
-let data = try PatchProjectLibrary.readPackage(at: temporaryURL)
-let summary = try PatchPackageCodec.inspect(data)
-let existingURL = await self?.existingPackageURL(for: summary.packageID)
-if let pending = try Self.persistImportedPackage(
-data: data,
-summary: summary,
-existingURL: existingURL
-) {
-await self?.requestPassword(pending: pending)
-} else {
-await self?.finishOperation(successMessageKey: "patch.imported_message")
-}
-} catch let error as PatchPackageError {
-await self?.failOperation(error)
-} catch {
-await self?.failOperation(.remoteImportFailed)
-}
-}
-}
-
-func requestUnlock(for item: PatchLibraryItem) {
-guard item.isLocked,!isBusy else { return }
-do {
-let data = try PatchProjectLibrary.readPackage(at: item.packageURL)
-pendingUnlock = PendingUnlock(
-data: data,
-summary: item.summary,
-existingURL: item.packageURL,
-origin: item.origin
-)
-passwordRequest = PatchPasswordRequest(
-summary: item.summary,
-origin: item.origin
-)
-} catch let error as PatchPackageError {
-present(error)
-} catch {
-present(.unsupportedFormat)
-}
-}
-
-func unlock(password: String) {
-guard let pending = pendingUnlock,!isBusy else { return }
-isBusy = true
-unlockErrorKey = nil
-Task.detached(priority:.userInitiated) { [weak self] in
-do {
-let decoded = try PatchPackageCodec.decode(pending.data, password: password)
-try PatchKeyStore.store(decoded.contentKey, for: pending.summary)
-do {
-try PatchProjectLibrary.installImportedPackage(
-data: pending.data,
-decoded: decoded,
-summary: pending.summary,
-existingURL: pending.existingURL,
-origin: pending.origin
-)
-} catch {
-try? PatchKeyStore.delete(for: pending.summary)
-throw error
-}
-await self?.clearPendingUnlock()
-await self?.finishOperation(successMessageKey: "patch.unlocked_message")
-} catch let error as PatchPackageError {
-await self?.failUnlock(error)
-} catch {
-await self?.failUnlock(.invalidPasswordOrCorruptedPackage)
-}
-}
-}
-
-func cancelUnlock() {
-clearPendingUnlock()
-isBusy = false
-}
-
-func clearUnlockError() {
-unlockErrorKey = nil
-}
-
-func delete(_ item: PatchLibraryItem) {
-do {
-try PatchProjectLibrary.delete(item)
-reload()
-} catch let error as PatchPackageError {
-present(error)
-} catch {
-present(.invalidProject)
-}
-}
-
-func synchronizeWorkspace(projectID: UUID, reportsSuccess: Bool = false) {
-guard let item = items.first(where: { $0.id == projectID }),
-item.summary.schemaVersion >= 2,
-!isBusy else { return }
-isBusy = true
-Task.detached(priority:.userInitiated) { [weak self] in
-do {
-_ = try PatchProjectLibrary.synchronizeWorkspace(item: item)
-await self?.finishWorkspaceSynchronization(reportsSuccess: reportsSuccess)
-} catch let error as PatchPackageError {
-await self?.failOperation(error)
-} catch {
-await self?.failOperation(.invalidProject)
-}
-}
-}
-
-private func finishWorkspaceSynchronization(reportsSuccess: Bool) {
-reload()
-isBusy = false
-if reportsSuccess {
-alert = PatchStoreAlert(
-titleKey: "common.done",
-messageKey: "patch.workspace_synced_message"
-)
-}
-}
-
-private func runOperation(
-successMessageKey: String,
-operation: @escaping () throws -> Void
-) {
-guard!isBusy else { return }
-isBusy = true
-Task.detached(priority:.userInitiated) { [weak self] in
-do {
-try operation()
-await self?.finishOperation(successMessageKey: successMessageKey)
-} catch let error as PatchPackageError {
-await self?.failOperation(error)
-} catch {
-await self?.failOperation(.invalidProject)
-}
-}
-}
-
-private func requestPassword(pending: PendingUnlock) {
-pendingUnlock = pending
-passwordRequest = PatchPasswordRequest(
-summary: pending.summary,
-origin: pending.origin
-)
-isBusy = false
-}
-
-private func existingPackageURL(for packageID: UUID) -> URL? {
-allItems.first(where: { $0.id == packageID })?.packageURL
-}
-
-private nonisolated static func persistImportedPackage(
-data: Data,
-summary: PatchPackageSummary,
-existingURL: URL?,
-password: String? = nil,
-origin: PatchPackageOrigin? = nil
-) throws -> PendingUnlock? {
-if let key = try PatchKeyStore.load(for: summary) {
-let decoded = try PatchPackageCodec.decode(data, contentKey: key)
-try PatchProjectLibrary.installImportedPackage(
-data: data,
-decoded: decoded,
-summary: summary,
-existingURL: existingURL,
-origin: origin
-)
-return nil
-}
-if summary.isPasswordProtected {
-guard let password else {
-return PendingUnlock(
-data: data,
-summary: summary,
-existingURL: existingURL,
-origin: origin
-)
-}
-let decoded = try PatchPackageCodec.decode(data, password: password)
-try PatchKeyStore.store(decoded.contentKey, for: summary)
-do {
-try PatchProjectLibrary.installImportedPackage(
-data: data,
-decoded: decoded,
-summary: summary,
-existingURL: existingURL,
-origin: origin
-)
-} catch {
-try? PatchKeyStore.delete(for: summary)
-throw error
-}
-return nil
-}
-let decoded = try PatchPackageCodec.decode(data, password: nil)
-try PatchProjectLibrary.installImportedPackage(
-data: data,
-decoded: decoded,
-summary: summary,
-existingURL: existingURL,
-origin: origin
-)
-return nil
-}
-
-private func clearPendingUnlock() {
-pendingUnlock = nil
-passwordRequest = nil
-unlockErrorKey = nil
-}
-
-private func finishOperation(successMessageKey: String) {
-reload()
-isBusy = false
-alert = PatchStoreAlert(titleKey: "common.done", messageKey: successMessageKey)
-}
-
-private func failOperation(_ error: PatchPackageError) {
-isBusy = false
-present(error)
-}
-
-private func failUnlock(_ error: PatchPackageError) {
-isBusy = false
-if case.invalidPasswordOrCorruptedPackage = error {
-unlockErrorKey = "patch.error.wrong_password"
-} else {
-unlockErrorKey = error.localizationKey
-}
-}
-
-private func present(_ error: PatchPackageError) {
-alert = PatchStoreAlert(
-titleKey: "common.failed",
-messageKey: error.localizationKey,
-messageArgument: error.localizationArgument
-)
-}
+    private func present(_ error: PatchPackageError) {
+        alert = PatchStoreAlert(
+            titleKey: "common.failed",
+            messageKey: error.localizationKey,
+            messageArgument: error.localizationArgument
+        )
+    }
 }
