@@ -17,9 +17,16 @@ jobs:
 
       - name: Build App
         run: |
+          # Procura onde está o arquivo .xcodeproj e salva o caminho
+          PROJECT_PATH=$(find . -name "*.xcodeproj" | head -n 1)
+          echo "Project found at: $PROJECT_PATH"
+          
+          # Extrai apenas o nome do projeto para o scheme
+          SCHEME_NAME=$(basename "$PROJECT_PATH" .xcodeproj)
+          
           xcodebuild archive \
-            -project ThreeOneOSFive/ThreeOneOSFive.xcodeproj \
-            -scheme ThreeOneOSFive \
+            -project "$PROJECT_PATH" \
+            -scheme "$SCHEME_NAME" \
             -archivePath ThreeOneOSFive.xcarchive \
             -sdk iphoneos \
             SKIP_INSTALL=NO
@@ -27,7 +34,9 @@ jobs:
       - name: Export IPA
         run: |
           cd ThreeOneOSFive.xcarchive/Products/Applications
-          zip -r ThreeOneOSFive.ipa ThreeOneOSFive.app
+          # Pega o nome do app compilado automaticamente para zipar
+          APP_NAME=$(ls -d *.app | head -n 1)
+          zip -r ThreeOneOSFive.ipa "$APP_NAME"
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
