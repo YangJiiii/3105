@@ -43,14 +43,12 @@ struct ContentView: View {
 
     var body: some View {
         ZStack {
-            // CAMADA DE FUNDO
             Image("background_gh")
                 .resizable()
                 .aspectRatio(contentMode: .fill)
                 .ignoresSafeArea()
-                .overlay(Color.black.opacity(0.4)) 
+                .overlay(Color.black.opacity(0.4))
 
-            // CAMADA DO APP
             Group {
                 if horizontalSizeClass == .regular {
                     regularLayout
@@ -225,6 +223,7 @@ private extension AppSection {
         case .sources: return "shippingbox.fill"
         case .installed: return "tray.full.fill"
         case .files: return "folder.fill"
-        case .search: return "magnifyingglass}
+        case .search: return "magnifyingglass"
+        }
     }
 }
