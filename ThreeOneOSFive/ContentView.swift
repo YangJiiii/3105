@@ -71,7 +71,7 @@ struct ContentView: View {
 
     private var compactLayout: some View {
         TabView(selection: tabSelection) {
-                ForEach(featureVisibility.visibleSections.filter { $0 == .installed }) { section in
+            ForEach(featureVisibility.visibleSections.filter { $0 == .installed }) { section in
                 sectionContent(section)
                     .tabItem {
                         CompactTabLabel(
@@ -109,7 +109,7 @@ struct ContentView: View {
                     )
                 }
             }
-             .navigationTitle("external gh777")
+            .navigationTitle("external gh777")
             .navigationSplitViewColumnWidth(min: 210, ideal: 240, max: 300)
         } detail: {
             sectionContent(selectedVisibleSection)
@@ -137,7 +137,9 @@ struct ContentView: View {
                 onOpenLogs: openLogs
             )
         case .installed:
+            // CORREÇÃO AQUI: Adicionado o parâmetro 'section' para evitar o erro de build
             PatchProjectsView(
+                section: .installed,
                 onOpenSettings: openSettings,
                 onOpenLogs: openLogs
             )
@@ -224,7 +226,7 @@ private extension AppSection {
         case .home: return "tab.home"
         case .new: return "tab.new"
         case .sources: return "tab.sources"
-         case .installed: return "gh777"
+        case .installed: return "gh777"
         case .files: return "tab.files"
         case .search: return "tab.search"
         }
