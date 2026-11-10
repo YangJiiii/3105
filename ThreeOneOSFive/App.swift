@@ -59,12 +59,11 @@ struct LoginView: View {
 // --- ESTE É O PONTO DE ENTRADA DO APP ---
 @main
 struct ThreeOneOSFiveApp: App {
-    // Criamos o estado aqui no topo para ele nunca ser deletado da memória
     @StateObject var appState = AppState()
     
     var body: some Scene {
         WindowGroup {
-            Group {
+            ZStack {
                 if appState.isUnlocked {
                     ContentView()
                         .environmentObject(appState)
@@ -73,7 +72,8 @@ struct ThreeOneOSFiveApp: App {
                         .environmentObject(appState)
                 }
             }
-            .environmentObject(appState) // Injeção global para evitar o crash
+            .environmentObject(appState)
         }
     }
 }
+
