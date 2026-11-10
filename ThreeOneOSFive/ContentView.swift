@@ -43,12 +43,14 @@ struct ContentView: View {
 
     var body: some View {
         ZStack {
+            // IMAGEM DE FUNDO - Agora configurada para preencher tudo
             Image("background_gh")
                 .resizable()
                 .aspectRatio(contentMode: .fill)
                 .ignoresSafeArea()
-                .overlay(Color.black.opacity(0.4))
+                .overlay(Color.black.opacity(0.3)) // Escurece levemente para ler os textos
 
+            // INTERFACE DO APP
             Group {
                 if horizontalSizeClass == .regular {
                     regularLayout
@@ -58,6 +60,8 @@ struct ContentView: View {
             }
             .tint(AppTheme.accent)
             .imageScale(.small)
+            .scrollContentBackground(.hidden) // REMOVE O FUNDO CINZA DAS LISTAS
+            .background(Color.clear) // TORNA O FUNDO TRANSPARENTE
             .onChange(of: patchDraftCoordinator.request?.id) { requestID in
                 if requestID != nil { tabNavigation.select(AppSection.installed.rawValue) }
             }
@@ -90,6 +94,7 @@ struct ContentView: View {
                     .tag(section.rawValue)
             }
         }
+        .scrollContentBackground(.hidden)
     }
 
     private var regularLayout: some View {
@@ -112,16 +117,15 @@ struct ContentView: View {
                             ? AppTheme.accent.opacity(0.14)
                             : Color.clear
                     )
-                    .accessibilityAddTraits(
-                        section.rawValue == tabNavigation.selectedTab ? .isSelected : []
-                    )
                 }
             }
             .navigationTitle("3105")
+            .scrollContentBackground(.hidden)
             .navigationSplitViewColumnWidth(min: 210, ideal: 240, max: 300)
         } detail: {
             sectionContent(selectedVisibleSection)
                 .id(selectedVisibleSection.rawValue)
+                .background(Color.clear)
         }
         .navigationSplitViewStyle(.balanced)
     }
@@ -129,6 +133,7 @@ struct ContentView: View {
     @ViewBuilder
     private func sectionContent(_ section: AppSection) -> some View {
         PatchProjectsView(section: section, onOpenSettings: openSettings, onOpenLogs: openLogs)
+            .background(Color.clear)
     }
 
     private var tabSelection: Binding<Int> {
