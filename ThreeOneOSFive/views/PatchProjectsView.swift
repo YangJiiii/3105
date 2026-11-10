@@ -699,7 +699,7 @@ private struct PatchProjectDetailView: View {
         (item?.summary.schemaVersion ?? 1) >= 2
     }
 
-    var body: some View {
+   var body: some View {
         List {
             if let item, let project = item.project {
                 Section(language.text("patch.information")) {
@@ -728,94 +728,8 @@ private struct PatchProjectDetailView: View {
                     }
                 }
 
-                if project.isPrivate && !item.canInspectContents {
-                    Section {
-                        VStack(spacing: 10) {
-                            Image(systemName: "lock.shield.fill")
-                                .font(.system(size: 30, weight: .medium))
-                                .foregroundStyle(AppTheme.accent)
-                            Text(language.text("patch.private_hidden_title"))
-                                .font(.headline)
-                            Text(language.text("patch.private_hidden_message"))
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                                .multilineTextAlignment(.center)
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 20)
-                    }
-                } else if isWorkspaceProject {
-                    Section {
-                        ForEach(project.allBundleIdentifiers, id: \.self) { bundleID in
-                            Label {
-                                Text(bundleID)
-                                    .font(.subheadline.monospaced())
-                            } icon: {
-                                Image(systemName: "app.dashed")
-                                    .foregroundStyle(AppTheme.accent)
-                            }
-                        }
-                        LabeledContent(language.text("patch.files")) {
-                            Text("\(project.rules.count)")
-                        }
-                        LabeledContent(language.text("patch.folders")) {
-                            Text("\(project.directories.count)")
-                        }
-                        if let workspaceURL = item.workspaceURL {
-                            NavigationLink {
-                                FileBrowserView(
-                                    containerPath: workspaceURL.path,
-                                    title: project.name,
-                                    bundleID: nil
-                                )
-                            } label: {
-                                Label(
-                                    language.text("patch.open_workspace"),
-                                    systemImage: "folder"
-                                )
-                            }
-                        }
-                    } header: {
-                        Text(language.text("patch.workspace"))
-                    } footer: {
-                        Text(language.text("patch.workspace_detail_footer"))
-                    }
-                } else {
-                    Section {
-                        ForEach(project.rules) { rule in
-                            Button {
-                                editingRule = rule
-                            } label: {
-                                HStack(spacing: 10) {
-                                    ruleSummary(rule)
-                                    Spacer(minLength: 8)
-                                    Image(systemName: "chevron.right")
-                                        .font(.caption.weight(.semibold))
-                                        .foregroundStyle(.tertiary)
-                                }
-                                .contentShape(Rectangle())
-                            }
-                            .buttonStyle(.plain)
-                            .accessibilityHint(language.text("patch.edit_rule_hint"))
-                        }
-                    } header: {
-                        Text(language.text("patch.rules"))
-                    } footer: {
-                        Text(language.text("patch.legacy_footer"))
-                    }
-                }
-
-                Section(language.text("patch.password")) {
-                    HStack(spacing: 12) {
-                        Image(systemName: item.summary.isPasswordProtected ? "lock.fill" : "lock.open")
-                            .foregroundStyle(AppTheme.accent)
-                            .frame(width: 24)
-                        Text(language.text(item.summary.isPasswordProtected
-                            ? "patch.password_locked"
-                            : "patch.no_password"))
-                            .font(.subheadline)
-                    }
-                }
+                // REMOVIDO: Seção de Workspace (Bundle IDs, Arquivos e Pastas)
+                // REMOVIDO: Seção de Password (Senha)
 
                 Section {
                     Button {
@@ -841,10 +755,7 @@ private struct PatchProjectDetailView: View {
                         .disabled(isWorking)
                     }
 
-                    Button(action: prepareExport) {
-                        actionLabel("patch.export", systemImage: "square.and.arrow.up")
-                    }
-                    .disabled(isWorking)
+                    // REMOVIDO: Botão de Export .3105
                 } footer: {
                     Text(language.text("patch.apply_footer"))
                 }
