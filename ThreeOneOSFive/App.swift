@@ -2,14 +2,14 @@ import SwiftUI
 
 @main
 struct ThreeOneOSFiveApp: App {
-    @State private var isUnlocked = false // Controla se o app foi liberado
+    @State private var isUnlocked = false
 
     var body: some Scene {
         WindowGroup {
             if isUnlocked {
-                ContentView() // Abre a tela principal do app
+                ContentView()
             } else {
-                LoginView(isUnlocked: $isUnlocked) // Abre a nossa tela de senha
+                LoginView(isUnlocked: $isUnlocked)
             }
         }
     }
