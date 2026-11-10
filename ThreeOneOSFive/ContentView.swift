@@ -122,36 +122,17 @@ struct ContentView: View {
     private func sectionContent(_ section: AppSection) -> some View {
         switch section {
         case .home:
-            RepositoryHomeView(
-                onOpenSettings: openSettings,
-                onOpenLogs: openLogs
-            )
+            RepositoryHomeView(onOpenSettings: openSettings, onOpenLogs: openLogs)
         case .new:
-            RepositoryNewView(
-                onOpenSettings: openSettings,
-                onOpenLogs: openLogs
-            )
+            RepositoryNewView(onOpenSettings: openSettings, onOpenLogs: openLogs)
         case .sources:
-            RepositorySourcesView(
-                onOpenSettings: openSettings,
-                onOpenLogs: openLogs
-            )
+            RepositorySourcesView(onOpenSettings: openSettings, onOpenLogs: openLogs)
         case .installed:
-            PatchProjectsView(
-                onOpenSettings: openSettings,
-                onOpenLogs: openLogs
-            )
+            PatchProjectsView(onOpenSettings: openSettings, onOpenLogs: openLogs)
         case .files:
-            AppDataBrowserView(
-                tabSession: filesTabSession,
-                onOpenSettings: openSettings,
-                onOpenLogs: openLogs
-            )
+            AppDataBrowserView(tabSession: filesTabSession, onOpenSettings: openSettings, onOpenLogs: openLogs)
         case .search:
-            RepositorySearchView(
-                onOpenSettings: openSettings,
-                onOpenLogs: openLogs
-            )
+            RepositorySearchView(onOpenSettings: openSettings, onOpenLogs: openLogs)
         }
     }
 
@@ -169,19 +150,26 @@ struct ContentView: View {
         )
     }
 
-        private var featureVisibility: FeatureVisibility {
-        // Criamos a visibilidade normal, mas filtramos para mostrar APENAS a aba Installed
+    private var featureVisibility: FeatureVisibility {
         let visibility = FeatureVisibility(developerModeEnabled: developerModeEnabled)
-        
-        // Aqui nós "enganamos" o app, dizendo que apenas a seção .installed é visível
         return CustomFeatureVisibility(base: visibility)
     }
-// Classe auxiliar para filtrar as abas sem deletar as originais do projeto
+
+    private func openSettings() {
+        showSettings = true
+    }
+
+    private func openLogs() {
+        showLogs = true
+    }
+} // <--- AQUI FECHA A CONTENTVIEW (O erro estava aqui)
+
+// A estrutura abaixo fica FORA da ContentView
 struct CustomFeatureVisibility: FeatureVisibility {
     let base: FeatureVisibility
     
     var visibleSections: [AppSection] {
-        return [.installed] // Aqui definimos que SÓ a aba Installed aparece
+        return [.installed]
     }
     
     func isVisible(_ section: AppSection) -> Bool {
