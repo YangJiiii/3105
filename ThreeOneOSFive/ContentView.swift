@@ -119,8 +119,9 @@ struct ContentView: View {
     }
 
     @ViewBuilder
+    @ViewBuilder
     private func sectionContent(_ section: AppSection) -> some View {
-        return PatchProjectsView(onOpenSettings: openSettings, onOpenLogs: openLogs)
+        PatchProjectsView(section: section, onOpenSettings: openSettings, onOpenLogs: openLogs)
     }
 
     private var tabSelection: Binding<Int> {
