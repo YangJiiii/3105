@@ -12,25 +12,33 @@ struct ContentView: View {
     @State private var showLogs = false
 
     var body: some View {
-        NavigationStack {
-            // Agora o app abre direto na view de projetos, sem abas inferiores
-            // Passamos .installed para que ele foque na "pasta" de texturas/instalados
-            PatchProjectsView(
-                section: .installed, 
-                onOpenSettings: openSettings, 
-                onOpenLogs: openLogs
-            )
-            .navigationTitle("GH777") // Renomeado para GH777
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
-                        openSettings()
-                    } label: {
-                        Image(systemName: "gearshape.fill")
+        ZStack {
+            Image("background_gh") 
+                .resizable()
+                .aspectRatio(contentMode: .fill) 
+                .ignoresSafeArea()
+                .clipped()
+
+            NavigationStack {
+                // Mudei de .installed para .home para pegar a lista geral de imports
+                PatchProjectsView(
+                    section: .home, 
+                    onOpenSettings: openSettings, 
+                    onOpenLogs: openLogs
+                )
+                .navigationTitle("GH777")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button {
+                            openSettings()
+                        } label: {
+                            Image(systemName: "gearshape.fill")
+                        }
                     }
                 }
             }
+            .scrollContentBackground(.hidden) 
         }
         .tint(AppTheme.accent)
         .sheet(isPresented: $showSettings) { SettingsView() }
