@@ -213,7 +213,7 @@ final class PatchProjectStore: ObservableObject {
         }
     }
 
-    private func importPackage(fromRemoteURL remoteURL remoteURL: URL) {
+    private func importPackage(fromRemoteURL remoteURL: URL) {
         guard !isBusy,
               PatchImportRoute.validatedRemoteURL(remoteURL) != nil else {
             if !isBusy { present(.invalidImportLink) }
