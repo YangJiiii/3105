@@ -63,16 +63,15 @@ struct ThreeOneOSFiveApp: App {
     
     var body: some Scene {
         WindowGroup {
-            ZStack {
-                if appState.isUnlocked {
-                    ContentView()
-                        .environmentObject(appState)
-                } else {
+            ContentView()
+                .environmentObject(appState)
+                .fullScreenCover(isPresented: Binding(
+                    get: { !appState.isUnlocked },
+                    set: { appState.isUnlocked = $0 }
+                )) {
                     LoginView()
                         .environmentObject(appState)
                 }
-            }
-            .environmentObject(appState)
         }
     }
 }
