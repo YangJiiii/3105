@@ -120,20 +120,7 @@ struct ContentView: View {
 
     @ViewBuilder
     private func sectionContent(_ section: AppSection) -> some View {
-        switch section {
-        case .home:
-            RepositoryHomeView(onOpenSettings: openSettings, onOpenLogs: openLogs)
-        case .new:
-            RepositoryNewView(onOpenSettings: openSettings, onOpenLogs: openLogs)
-        case .sources:
-            RepositorySourcesView(onOpenSettings: openSettings, onOpenLogs: openLogs)
-        case .installed:
-            PatchProjectsView(onOpenSettings: openSettings, onOpenLogs: openLogs)
-        case .files:
-            AppDataBrowserView(tabSession: filesTabSession, onOpenSettings: openSettings, onOpenLogs: openLogs)
-        case .search:
-            RepositorySearchView(onOpenSettings: openSettings, onOpenLogs: openLogs)
-        }
+        return PatchProjectsView(onOpenSettings: openSettings, onOpenLogs: openLogs)
     }
 
     private var tabSelection: Binding<Int> {
@@ -198,7 +185,7 @@ private struct CompactTabLabel: View {
     var body: some View {
         if let image = UIImage(
             systemName: systemImage,
-            withConfiguration: UIImage.SymbolConfiguration(pointSize: 17,)
+            withConfiguration: UIImage.SymbolConfiguration(pointSize: 17, weight: .medium)
         )?.withRenderingMode(.alwaysTemplate) {
             Image(uiImage: image)
         } else {
