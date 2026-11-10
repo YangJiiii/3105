@@ -17,12 +17,15 @@ jobs:
 
       - name: Build App
         run: |
+          # 1. Localiza o arquivo .xcodeproj
           PROJECT_PATH=$(find . -name "*.xcodeproj" | head -n 1)
           echo "Project found at: $PROJECT_PATH"
           
+          # 2. Descobre AUTOMATICAMENTE qual é o scheme disponível
           SCHEME_NAME=$(xcodebuild -list -project "$PROJECT_PATH" | grep "Schemes:" -A 1 | tail -n 1 | sed 's/  //g' | sed 's/ / /g' | xargs)
           echo "Scheme detected as: $SCHEME_NAME"
           
+          # 3. Executa o build ignorando a assinatura (para assinar no Esign/Sideloadly)
           xcodebuild archive \
             -project "$PROJECT_PATH" \
             -scheme "$SCHEME_NAME" \
@@ -34,12 +37,18 @@ jobs:
 
       - name: Export IPA
         run: |
-          cd ThreeOneOSFive.xcarchive/Products/Applications
-          APP_NAME=$(ls -d *.app | head -n 1)
-          zip -r ThreeOneOSFive.ipa "$APP_NAME"
+          # 1. Cria a pasta Payload (Obrigatória para evitar o Erro 301)
+          mkdir -p Payload
+          
+          # 2. Localiza o app compilado e move para dentro da pasta Payload
+          APP_PATH=$(find ThreeOneOSFive.xcarchive/Products/Applications -name "*.app" | head -n 1)
+          cp -r "$APP_PATH" Payload/
+          
+          # 3. Zipa a pasta Payload e renomeia para .ipa
+          zip -r ThreeOneOSFive.ipa Payload
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: GH777-App-IPA
-          path: ThreeOneOSFive.xcarchive/Products/Applications/ThreeOneOSFive.ipa
+          path: ThreeOneOSFive.ipa
