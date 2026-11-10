@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 
 struct ContentView: View {
     @Environment(\.appLanguage) private var language
@@ -14,95 +13,64 @@ struct ContentView: View {
     @State private var showLogs = false
 
     init() {
-        // FORÇA TRANSPARÊNCIA TOTAL NO SISTEMA (UIKit)
-        // Isso mata a "parede" preta/cinza que esconde a foto
-        UITabBar.appearance().backgroundColor = .clear
-        UITabBar.appearance().backgroundImage = UIImage()
-        UITabBar.appearance().shadowImage = UIImage()
-        UITableView.appearance().backgroundColor = .clear
-        
-        #if targetEnvironment(simulator)
-        let arguments = ProcessInfo.processInfo.arguments
-        let initialTab: Int
-        if arguments.contains("--simulate-new-tab") {
-            initialTab = 1
-        } else if arguments.contains("--simulate-sources-tab") {
-            initialTab = 2
-        } else if arguments.contains("--simulate-installed-tab")
-                    || arguments.contains("--simulate-patch-tab")
-                    || arguments.contains("--simulate-wallpaper-tab") {
-            initialTab = 3
-        } else if arguments.contains("--simulate-files-tab") {
-            initialTab = 4
-        } else if arguments.contains("--simulate-search-tab") {
-            initialTab = 5
-        } else {
-            initialTab = 0
-        }
-        _tabNavigation = State(initialValue: AppTabNavigationState(selectedTab: initialTab))
-        _showSettings = State(
-            initialValue: arguments.contains("--simulate-settings")
-        )
-        #else
         _tabNavigation = State(initialValue: AppTabNavigationState())
-        #endif
     }
 
     var body: some View {
-        ZStack {
-            // IMAGEM DE FUNDO - Fixada para não deformar e cobrir a tela
-            Image("background_gh")
-                .resizable()
-                .aspectRatio(contentMode: .fill)
-                .ignoresSafeArea()
-                .allowsHitTesting(false)
-
-            // INTERFACE
-            Group {
-                if horizontalSizeClass == .regular {
-                    regularLayout
-                } else {
-                    compactLayout
-                }
+        Group {
+            if horizontalSizeClass == .regular {
+                regularLayout
+            } else {
+                compactLayout
             }
-            .tint(AppTheme.accent)
-            .imageScale(.small)
-            .scrollContentBackground(.hidden) // Remove fundo de Listas
-            .background(Color.clear)         // Torna a View transparente
-            .onChange(of: patchDraftCoordinator.request?.id) { requestID in
-                if requestID != nil { tabNavigation.select(AppSection.installed.rawValue) }
-            }
-            .onChange(of:patchDraftCoordinator.importRequest?.id) { requestID in
-                if requestID != nil { tabNavigation.select(AppSection.installed.rawValue) }
-            }
-            .onChange(of: developerModeEnabled) { _ in
-                tabNavigation.reconcileSelection(with: featureVisibility)
-            }
-            .onAppear {
-                tabNavigation.reconcileSelection(with: featureVisibility)
-            }
-            .sheet(isPresented: $showSettings) { SettingsView() }
-            .sheet(isPresented: $showLogs) { LogView() }
-            .patchStorePresentation(patchStore)
-            .repositoryStorePresentation(repositoryStore, patchStore: patchStore)
         }
+        .tint(AppTheme.accent)
+        .imageScale(.small)
+        .onChange(of: patchDraftCoordinator.request?.id) { requestID in
+            if requestID != nil { tabNavigation.select(AppSection.installed.rawValue) }
+        }
+        .onChange(of: developerModeEnabled) { _ in
+            tabNavigation.reconcileSelection(with: featureVisibility)
+        }
+        .onAppear {
+            tabNavigation.reconcileSelection(with: featureVisibility)
+        }
+        .sheet(isPresented: $showSettings) { SettingsView() }
+        .sheet(isPresented: $showLogs) { LogView() }
+        .patchStorePresentation(patchStore)
+        .repositoryStorePresentation(repositoryStore, patchStore: patchStore)
     }
 
     private var compactLayout: some View {
         TabView(selection: tabSelection) {
-            ForEach(featureVisibility.visibleSections) { section in
-                sectionContent(section)
-                    .tabItem {
-                        CompactTabLabel(
-                            title: sectionTitle(section),
-                            systemImage: section.systemImage
-                        )
-                    }
-                    .tag(section.rawValue)
-            }
+            // ABA 1: HS
+            sectionContent(.home)
+                .tabItem {
+                    Label("HS", systemImage: "house.fill")
+                }
+                .tag(AppSection.home.rawValue)
+
+            // ABA 2: PAINEL
+            sectionContent(.new)
+                .tabItem {
+                    Label("PAINEL", systemImage: "clock.fill")
+                }
+                .tag(AppSection.new.rawValue)
+
+            // ABA 3: HOLOGRAMAS
+            sectionContent(.sources)
+                .tabItem {
+                    Label("HOLOGRAMAS", systemImage: "shippingbox.fill")
+                }
+                .tag(AppSection.sources.rawValue)
+
+            // ABA 4: TEXTURAS
+            sectionContent(.installed)
+                .tabItem {
+                    Label("TEXTURAS", systemImage: "tray.full.fill")
+                }
+                .tag(AppSection.installed.rawValue)
         }
-        .scrollContentBackground(.hidden)
-        .background(Color.clear)
     }
 
     private var regularLayout: some View {
@@ -128,35 +96,24 @@ struct ContentView: View {
                 }
             }
             .navigationTitle("3105")
-            .scrollContentBackground(.hidden)
-            .background(Color.clear)
             .navigationSplitViewColumnWidth(min: 210, ideal: 240, max: 300)
         } detail: {
             sectionContent(selectedVisibleSection)
                 .id(selectedVisibleSection.rawValue)
-                .background(Color.clear)
         }
         .navigationSplitViewStyle(.balanced)
     }
 
     @ViewBuilder
     private func sectionContent(_ section: AppSection) -> some View {
+        // Aqui é onde a mágica acontece: cada aba carrega a view filtrada por seção
         PatchProjectsView(section: section, onOpenSettings: openSettings, onOpenLogs: openLogs)
-            .background(Color.clear)
-            .scrollContentBackground(.hidden)
     }
 
     private var tabSelection: Binding<Int> {
         Binding(
             get: { tabNavigation.selectedTab },
             set: { tabNavigation.select($0) }
-        )
-    }
-
-    private var filesTabSession: Binding<FilesTabSession> {
-        Binding(
-            get: { tabNavigation.filesTabs },
-            set: { tabNavigation.setFilesTabs($0) }
         )
     }
 
@@ -191,32 +148,8 @@ struct ContentView: View {
         }
     }
 
-    private func openSettings() {
-        showSettings = true
-    }
-
-    private func openLogs() {
-        showLogs = true
-    }
-}
-
-private struct CompactTabLabel: View {
-    let title: String
-    let systemImage: String
-
-    @ViewBuilder
-    var body: some View {
-        if let image = UIImage(
-            systemName: systemImage,
-            withConfiguration: UIImage.SymbolConfiguration(pointSize: 17, weight: .medium)
-        )?.withRenderingMode(.alwaysTemplate) {
-            Image(uiImage: image)
-        } else {
-            Image(systemName: systemImage)
-                .font(.system(size: 17, weight: .medium))
-        }
-        Text(title)
-    }
+    private func openSettings() { showSettings = true }
+    private func openLogs() { showLogs = true }
 }
 
 private extension AppSection {
