@@ -39,13 +39,29 @@ final class PatchProjectStore: ObservableObject {
 
     private var pendingUnlock: PendingUnlock?
 
-    init() {
+        init() {
         isBusy = true
         Task.detached(priority: .userInitiated) { [weak self] in
+            // 1. Primeiro, carrega os patches que o usuário já importou manualmente
             let loadedItems = PatchProjectLibrary.load()
+            
+            // 2. Agora, a mágica: busca arquivos .3105 embutidos no App (Bundle)
+            if let bundleURLs = Bundle.main.urls(forResourcesWithExtension: "3105", subdirectory: nil) {
+                for url in bundleURLs {
+                    do {
+                        let data = try Data(contentsOf: url)
+                        // Importa automaticamente cada arquivo encontrado para a biblioteca do app
+                        _ = try await self?.importPackage(data: data)
+                    } catch {
+                        print("Erro ao carregar patch embutido: \(url.lastPathComponent)")
+                    }
+                }
+            }
+            
             await self?.finishInitialLoad(loadedItems)
         }
     }
+
 
     // --- FUNÇÃO DE FILTRAGEM PARA AS ABAS ---
     func filterProjects(for section: AppSection) {
