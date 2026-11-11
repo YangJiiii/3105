@@ -6,17 +6,24 @@ struct PatchProjectsView: View {
     @State private var selectedCategory: String? = nil
     @State private var searchText = ""
     
-    // Categorias configuradas para o Dashboard
+    // Categorias configuradas com seus respectivos prefixos de arquivo
     let categories = [
-        ("Cache", "cpu"),
-        ("Avatar", "person.fill"),
-        ("Holograma", "sparkles"),
-        ("AI", "brain"),
-        ("Skin", "tshirt.fill"),
-        ("Externo", "square.grid.2x2.fill")
+        ("Avatar", "person.fill", "AVT_"),
+        ("Cache", "cpu", "CCH_"),
+        ("Holograma", "sparkles", "HOL_"),
+        ("AI", "brain", "AI_"),
+        ("Skin", "tshirt.fill", "TEX_"),
+        ("Externo", "square.grid.2x2.fill", "EXT_")
     ]
     
-    // Filtra os itens com base na categoria selecionada e na busca
+    // Função auxiliar para filtrar por prefixo ou nome
+    func filterItems(for categoryPrefix: String, currentItems: [PatchLibraryItem]) -> [PatchLibraryItem] {
+        return currentItems.filter { item in
+            let name = item.project?.name ?? ""
+            return name.uppercased().hasPrefix(categoryPrefix.uppercased())
+        }
+    }
+    
     var filteredItems: [PatchLibraryItem] {
         var items = store.items
         
@@ -24,8 +31,11 @@ struct PatchProjectsView: View {
             items = items.filter { $0.project?.name.localizedCaseInsensitiveContains(searchText) ?? false }
         }
         
-        if let category = selectedCategory {
-            return items.filter { $0.project?.name.localizedCaseInsensitiveContains(category) ?? false }
+        if let categoryName = selectedCategory {
+            // Busca o prefixo correspondente ao nome da categoria selecionada
+            if let categoryData = categories.first(where: { $0.0 == categoryName }) {
+                return filterItems(for: categoryData.2, currentItems: items)
+            }
         }
         
         return items
@@ -33,11 +43,9 @@ struct PatchProjectsView: View {
     
     var body: some View {
         ZStack {
-            // Fundo Preto Sólido (Estilo Gamer)
             Color.black.ignoresSafeArea()
             
             VStack(spacing: 25) {
-                // Header
                 VStack(spacing: 8) {
                     Text("DASHBOARD")
                         .font(.system(size: 18, weight: .bold, design: .monospaced))
@@ -59,9 +67,7 @@ struct PatchProjectsView: View {
                         }
                         Spacer()
                         
-                        Button(action: {
-                            // Ação do botão de menu (opcional)
-                        }) {
+                        Button(action: {}) {
                             Image(systemName: "ellipsis.circle.fill")
                                 .resizable()
                                 .frame(width: 30, height: 30)
@@ -72,7 +78,6 @@ struct PatchProjectsView: View {
                 .padding(.horizontal)
                 .padding(.top)
                 
-                // Barra de Busca
                 HStack {
                     Image(systemName: "magnifyingglass")
                         .foregroundColor(.gray)
@@ -85,7 +90,6 @@ struct PatchProjectsView: View {
                 .padding(.horizontal)
                 
                 if let category = selectedCategory {
-                    // VIEW DE LISTA DE PATCHES (Quando uma categoria é selecionada)
                     VStack {
                         HStack {
                             Button(action: { selectedCategory = nil }) {
@@ -122,7 +126,6 @@ struct PatchProjectsView: View {
                     }
                     .transition(.move(edge: .trailing))
                 } else {
-                    // GRID DE CATEGORIAS (Dashboard Principal)
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 15) {
                         ForEach(categories, id: \.0) { category in
                             Button(action: { selectedCategory = category.0 }) {
@@ -141,8 +144,8 @@ struct PatchProjectsView: View {
                                             .font(.headline)
                                             .foregroundColor(.white)
                                         
-                                        // Contador de patches real baseado na store
-                                        Text("\(store.items.filter { $0.project?.name.localizedCaseInsensitiveContains(category.0) ?? false }.count) patches")
+                                        // Contador atualizado para contar por prefixo
+                                        Text("\(filterItems(for: category.2, currentItems: store.items).count) patches")
                                             .font(.caption)
                                             .foregroundColor(.gray)
                                     }
@@ -164,7 +167,6 @@ struct PatchProjectsView: View {
                     .padding()
                     .transition(.move(edge: .leading))
                 }
-                
                 Spacer()
             }
         }
@@ -194,7 +196,8 @@ struct PatchCard: View {
                 }
                 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(item.project?.name ?? "Patch Desconhecido")
+                    // Remove o prefixo do nome para ficar bonito na tela
+                    Text(cleanName(item.project?.name))
                         .font(.headline)
                         .foregroundColor(.white)
                     
@@ -222,8 +225,7 @@ struct PatchCard: View {
                         Toggle("", isOn: Binding(
                             get: { item.project?.isEnabled ?? false },
                             set: { newValue in
-                                // Aqui chama a função de aplicar o patch
-                                store.togglePatch(item: item, enabled: newValue)
+                                store.togglePatch(item: item,enabled: newValue
                             }
                         ))
                         .toggleStyle(SwitchToggleStyle(tint: .purple))
@@ -239,5 +241,14 @@ struct PatchCard: View {
             RoundedRectangle(cornerRadius: 15)
                 .stroke(Color.white.opacity(0.1), lineWidth: 1)
         )
+    }
+    
+    // Função para remover o prefixo (AVT_, CCH_, etc) da exibição do nome
+    func cleanName(_ name: String?) -> String {
+        guard let name = name else { return "Patch Desconhecido" }
+        if let underscoreIndex = name.firstIndex(of: "_") {
+            return String(name[name.index(after: underscoreIndex)...])
+        }
+        return name
     }
 }
