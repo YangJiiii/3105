@@ -68,16 +68,14 @@ struct PatchProjectsView: View {
                     }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
-    Menu {
-        Button { showImporter = true } label: {
-            Label("Importar", systemImage: "square.and.arrow.down")
-        }
-        // O botão "Novo" foi removido daqui
-    } label: {
-        Image(systemName: "ellipsis.circle.fill").foregroundStyle(.white)
-    }
-}
-
+                    Menu {
+                        Button { showImporter = true } label: {
+                            Label("Importar", systemImage: "square.and.arrow.down")
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle.fill").foregroundStyle(.white)
+                    }
+                }
             }
             .sheet(isPresented: $showImporter) {
                 FileDocumentPicker(
@@ -94,73 +92,66 @@ struct PatchProjectsView: View {
                 )
                 .ignoresSafeArea()
             }
-            .sheet(isPresented: $showCreate) {
-                PatchProjectEditorView(existingProject: nil, passwordIsProtected: false) { project, password in
-                    store.create(project: project, password: password)
-                }
-            }
         }
     }
 
     private var dashboardView: some View {
-    ScrollView {
-        VStack(spacing: 25) {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("ESCOLHA UMA CATEGORIA")
-                    .font(.caption.bold())
-                    .foregroundStyle(.purple)
-                Text("Patches disponíveis para FF")
-                    .font(.title2.bold())
-                    .foregroundStyle(.white)
-                Text("Toque em uma opção para abrir os patches.")
-                    .font(.footnote)
-                    .foregroundStyle(.gray)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal)
-            .padding(.top)
-
-            // Se não houver patches instalados, mostra o botão de Importar no centro
-            if store.items.isEmpty {
-                VStack(spacing: 20) {
-                    Image(systemName: "square.and.arrow.down")
-                        .font(.system(size: 60))
+        ScrollView {
+            VStack(spacing: 25) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("ESCOLHA UMA CATEGORIA")
+                        .font(.caption.bold())
                         .foregroundStyle(.purple)
-                    
-                    Text("Nenhum Patch Instalado")
-                        .font(.title3.bold())
+                    Text("Patches disponíveis para FF")
+                        .font(.title2.bold())
                         .foregroundStyle(.white)
-                    
-                    Button {
-                        showImporter = true
-                    } label: {
-                        HStack {
-                            Image(systemName: "plus.circle.fill")
-                            Text("Importar Patch")
-                        }
-                        .fontWeight(.bold)
-                        .foregroundStyle(.white)
-                        .padding()
-                        .frame(maxWidth: 200)
-                        .background(Color.purple)
-                        .cornerRadius(15)
-                    }
+                    Text("Toque em uma opção para abrir os patches.")
+                        .font(.footnote)
+                        .foregroundStyle(.gray)
                 }
-                .padding(.vertical, 50)
-            }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal)
+                .padding(.top)
 
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 15) {
-                ForEach(categories, id: \.name) { cat in
-                    CategoryCard(category: cat, count: countForCategory(cat.name)) {
-                        selectedCategory = cat.name
+                if store.items.isEmpty {
+                    VStack(spacing: 20) {
+                        Image(systemName: "square.and.arrow.down")
+                            .font(.system(size: 60))
+                            .foregroundStyle(.purple)
+                        
+                        Text("Nenhum Patch Instalado")
+                            .font(.title3.bold())
+                            .foregroundStyle(.white)
+                        
+                        Button {
+                            showImporter = true
+                        } label: {
+                            HStack {
+                                Image(systemName: "plus.circle.fill")
+                                Text("Importar Patch")
+                            }
+                            .fontWeight(.bold)
+                            .foregroundStyle(.white)
+                            .padding()
+                            .frame(maxWidth: 200)
+                            .background(Color.purple)
+                            .cornerRadius(15)
+                        }
+                    }
+                    .padding(.vertical, 50)
+                }
+
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 15) {
+                    ForEach(categories, id: \.name) { cat in
+                        CategoryCard(category: cat, count: countForCategory(cat.name)) {
+                            selectedCategory = cat.name
+                        }
                     }
                 }
+                .padding(.horizontal)
             }
-            .padding(.horizontal)
         }
     }
-}
-
 
     private var patchesListView: some View {
         VStack {
@@ -226,7 +217,7 @@ struct CategoryCard: View {
 
 struct PatchCard: View {
     let item: PatchLibraryItem
-    let store: PatchProjectStore
+    : PatchProjectStore
     @State private var isExpanded = false
 
     var body: some View {
@@ -248,583 +239,190 @@ struct PatchCard: View {
                     Text("Turn on to apply")
                         .font(.caption)
                         .foregroundStyle(.gray)
-                ```swift
-}
-Spacer()
-Image(systemName: isExpanded? "chevron.up": "chevron.down")
-.foregroundStyle(.purple)
-}
-.padding()
-.background(Color(white: 0.05))
-.cornerRadius(12)
-.overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.purple.opacity(0.3), lineWidth: 1))
-.contentShape(Rectangle())
-.onTapGesture { withAnimation { isExpanded.toggle() } }
+                }
+                Spacer()
+                Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                    .foregroundStyle(.purple)
+            }
+            .padding()
+            .background(Color(white: 0.05))
+            .cornerRadius(12)
+            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.purple.opacity(0.3), lineWidth: 1))
+            .contentShape(Rectangle())
+            .onTapGesture { withAnimation { isExpanded.toggle() } }
 
-if isExpanded {
-VStack(spacing: 15) {
-HStack {
-Text("PATCH INACTIVE")
-.font(.caption.bold())
-.foregroundStyle(.gray)
-Spacer()
-Toggle("", isOn: Binding(
-get: { false },
-set: { _ in
-applyPatch()
-}
-))
-.toggleStyle(SwitchToggleStyle(tint:.purple))
-}
-.padding(.top)
-}
-.padding()
-.background(Color(white: 0.08))
-.cornerRadius(12)
-}
-}
-}
+            if isExpanded {
+                VStack(spacing: 15) {
+                    HStack {
+                        Text("PATCH INACTIVE")
+                            .font(.caption.bold())
+                            .foregroundStyle(.gray)
+                        Spacer()
+                        Toggle("", isOn: Binding(
+                            get: { false },
+                            set: { _ in applyPatch() }
+                        ))
+                        .toggleStyle(SwitchToggleStyle(tint: .purple))
+                    }
+                    .padding(.top)
+                }
+                .padding()
+                .background(Color(white: 0.08))
+                .cornerRadius(12)
+            }
+        }
+    }
 
-private func applyPatch() {
-Task {
-do {
-if let project = item.project {
-_ = try DevicePatchService.apply(project: project)
-}
-} catch {
-print("Erro ao aplicar: \(error)")
-}
-}
-}
+    private func applyPatch() {
+        Task {
+            do {
+                if let project = item.project {
+                    _ = try DevicePatchService.apply(project: project)
+                }
+            } catch {
+                print("Erro ao aplicar: \(error)")
+            }
+        }
+    }
 }
 
 struct CategoryItem {
-let name: String
-let icon: String
-let color: Color
+    let name: String
+    let icon: String
+    let color: Color
 }
 
 private struct PatchProjectDetailView: View {
-@Environment(\.appLanguage) private var language
-@ObservedObject var store: PatchProjectStore
-let projectID: UUID
-@State private var isWorking = false
+    @Environment(\.appLanguage) private var language
+    @ObservedObject var store: PatchProjectStore
+    let projectID: UUID
+    @State private var isWorking = false
 
-private var item: PatchLibraryItem? {
-store.items.first(where: { $0.id == projectID })
-}
+    private var item: PatchLibraryItem? {
+        store.items.first(where: { $0.id == projectID })
+    }
 
-var body: some View {
-ZStack {
-Color.black.ignoresSafeArea()
-VStack(spacing: 30) {
-VStack(spacing: 10) {
-Text(item?.project?.name?? "Patch")
-.font(.title.bold())
-.foregroundStyle(.white)
-Text("EXTERNAL SYSTEM")
-.font(.caption)
-.foregroundStyle(.purple)
-}
-.padding(.top, 50)
+    var body: some View {
+        ZStack {
+            Color.black.ignoresSafeArea()
+            VStack(spacing: 30) {
+                VStack(spacing: 10) {
+                    Text(item?.project?.name ?? "Patch")
+                        .font(.title.bold())
+                        .foregroundStyle(.white)
+                    Text("EXTERNAL SYSTEM")
+                        .font(.caption)
+                        .foregroundStyle(.purple)
+                }
+                .padding(.top, 50)
 
-Button(action: apply) {
-HStack {
-Image(systemName: isWorking? "arrow.clockwise": "checkmark.shield.fill")
-.rotating(isWorking)
-Text(isWorking? "APPLYING...": "APPLY PATCH")
-.fontWeight(.bold)
-}
-.font(.headline)
-.foregroundStyle(.white)
-.frame(maxWidth:.infinity)
-.padding()
-.background(Color.purple)
-.cornerRadius(15)
-.shadow(color:.purple.opacity(0.5), radius: 10, x: 0, y: 5)
-}
-.disabled(isWorking)
-.padding(.horizontal, 40)
-Spacer()
-}
-.padding()
-}
-}
+                Button(action: apply) {
+                    HStack {
+                        Image(systemName: isWorking ? "arrow.clockwise" : "checkmark.shield.fill")
+                            .rotating(isWorking)
+                        Text(isWorking ? "APPLYING..." : "APPLY PATCH")
+                            .fontWeight(.bold)
+                    }
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.purple)
+                    .cornerRadius(15)
+                    .shadow(color: .purple.opacity(0.5), radius: 10, x: 0, y: 5)
+                }
+                .disabled(isWorking)
+                .padding(.horizontal, 40)
+                Spacer()
+            }
+            .padding()
+        }
+    }
 
-private func apply() {
-guard let item, let project = item.project else { return }
-isWorking = true
-Task.detached(priority:.userInitiated) {
-do {
-_ = try DevicePatchService.apply(project: project)
-await MainActor.run { isWorking = false }
-} catch {
-await MainActor.run { isWorking = false }
-}
-}
-}
+    private func apply() {
+        guard let item, let project = item.project else { return }
+        isWorking = true
+        Task.detached(priority: .userInitiated) {
+            do {
+                _ = try DevicePatchService.apply(project: project)
+                await MainActor.run { isWorking = false }
+            } catch {
+                await MainActor.run { isWorking = false }
+            }
+        }
+    }
 }
 
 extension View {
-func rotating(_ animating: Bool) -> some View {
-animation(.linear(duration: 1).repeatForever(autoreverses: false), value: animating)
-}
+    func rotating(_ animating: Bool) -> some View {
+        animation(.linear(duration: 1).repeatForever(autoreverses: false), value: animating)
+    }
 }
 
 private struct PatchStorePresentationModifier: ViewModifier {
-@ObservedObject var store: PatchProjectStore
+    @ObservedObject var store: PatchProjectStore
 
-func body(content: Content) -> some View {
-content
-.sheet(item: $store.passwordRequest, onDismiss: store.cancelUnlock) { request in
-PatchUnlockView(store: store, request: request)
-}
-}
+    func body(content: Content) -> some View {
+        content
+            .sheet(item: $store.passwordRequest, onDismiss: store.cancelUnlock) { request in
+                PatchUnlockView(store: store, request: request)
+            }
+    }
 }
 
 extension View {
-func patchStorePresentation(_ store: PatchProjectStore) -> some View {
-modifier(PatchStorePresentationModifier(store: store))
-}
+    func patchStorePresentation(_ store: PatchProjectStore) -> some View {
+        modifier(PatchStorePresentationModifier(store: store))
+    }
 }
 
 struct PatchUnlockView: View {
-@Environment(\.appLanguage) private var language
-@Environment(\.dismiss) private var dismiss
-@ObservedObject var store: PatchProjectStore
-let request: PatchPasswordRequest
-@State private var password = ""
+    @Environment(\.appLanguage) private var language
+    @Environment(\.dismiss) private var dismiss
+    @ObservedObject var store: PatchProjectStore
+    let request: PatchPasswordRequest
+    @State private var password = ""
 
-var body: some View {
-NavigationStack {
-Form {
-Section {
-SecureField(language.text("patch.password"), text: $password)
-.textContentType(.password)
-.submitLabel(.done)
-.onSubmit(unlock)
-.onChange(of: password) { _ in
-store.clearUnlockError()
-}
-if let errorKey = store.unlockErrorKey {
-Text(language.text(errorKey))
-.font(.footnote)
-.foregroundStyle(.red)
-}
-} footer: {
-if let origin = request.origin {
-Text(language.text("patch.password_repo_contact", origin.repositoryName))
-} else {
-Text(language.text("patch.password_once_message"))
-}
-}
-}
-.navigationTitle(language.text("patch.unlock"))
-.navigationBarTitleDisplayMode(.inline)
-.toolbar {
-ToolbarItem(placement:.cancellationAction) {
-Button(language.text("common.cancel")) { dismiss() }
-}
-ToolbarItem(placement:.confirmationAction) {
-Button(language.text("patch.unlock"), action: unlock)
-.disabled(password.isEmpty || store.isBusy)
-}
-}
-}
-}
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    SecureField(language.text("patch.password"), text: $password)
+                        .textContentType(.password)
+                        .submitLabel(.done)
+                        .onSubmit(unlock)
+                        .onChange(of: password) { _ in
+                            store.clearUnlockError()
+                        }
+                    if let errorKey = store.unlockErrorKey {
+                        Text(language.text(errorKey))
+                            .font(.footnote)
+                            .foregroundStyle(.red)
+                    }
+                } footer: {
+                    if let origin = request.origin {
+                        Text(language.text("patch.password_repo_contact", origin.repositoryName))
+                    } else {
+                        Text(language.text("patch.password_once_message"))
+                    }
+                }
+            }
+            .navigationTitle(language.text("patch.unlock"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(language.text("common.cancel")) { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(language.text("patch.unlock"), action: unlock)
+                        .disabled(password.isEmpty || store.isBusy)
+                }
+            }
+        }
+    }
 
-private func unlock() {
-guard!password.isEmpty else { return }
-store.unlock(password: password)
-}
-}
-``````swift
-.font(.caption)
-.foregroundStyle(.gray)
-}
-}
-Spacer()
-Image(systemName: isExpanded? "chevron.up": "chevron.down")
-.foregroundStyle(.purple)
-}
-.padding()
-.background(Color(white: 0.05))
-.cornerRadius(12)
-.overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.purple.opacity(0.3), lineWidth: 1))
-.contentShape(Rectangle())
-.onTapGesture { withAnimation { isExpanded.toggle() } }
-
-if isExpanded {
-VStack(spacing: 15) {
-HStack {
-Text("PATCH INACTIVE")
-.font(.caption.bold())
-.foregroundStyle(.gray)
-Spacer()
-Toggle("", isOn: Binding(
-get: { false },
-set: { _ in
-applyPatch()
-}
-))
-.toggleStyle(SwitchToggleStyle(tint:.purple))
-}
-.padding(.top)
-}
-.padding()
-.background(Color(white: 0.08))
-.cornerRadius(12)
-}
-}
-}
-
-private func applyPatch() {
-Task {
-do {
-if let project = item.project {
-_ = try DevicePatchService.apply(project: project)
-}
-} catch {
-print("Erro ao aplicar: \(error)")
-}
-}
-}
-}
-
-struct CategoryItem {
-let name: String
-let icon: String
-let color: Color
-}
-
-private struct PatchProjectDetailView: View {
-@Environment(\.appLanguage) private var language
-@ObservedObject var store: PatchProjectStore
-let projectID: UUID
-@State private var isWorking = false
-
-private var item: PatchLibraryItem? {
-store.items.first(where: { $0.id == projectID })
-}
-
-var body: some View {
-ZStack {
-Color.black.ignoresSafeArea()
-VStack(spacing: 30) {
-VStack(spacing: 10) {
-Text(item?.project?.name?? "Patch")
-.font(.title.bold())
-.foregroundStyle(.white)
-Text("EXTERNAL SYSTEM")
-.font(.caption)
-.foregroundStyle(.purple)
-}
-.padding(.top, 50)
-
-Button(action: apply) {
-HStack {
-Image(systemName: isWorking? "arrow.clockwise": "checkmark.shield.fill")
-.rotating(isWorking)
-Text(isWorking? "APPLYING...": "APPLY PATCH")
-.fontWeight(.bold)
-}
-.font(.headline)
-.foregroundStyle(.white)
-.frame(maxWidth:.infinity)
-.padding()
-.background(Color.purple)
-.cornerRadius(15)
-.shadow(color:.purple.opacity(0.5), radius: 10, x: 0, y: 5)
-}
-.disabled(isWorking)
-.padding(.horizontal, 40)
-Spacer()
-}
-.padding()
-}
-}
-
-private func apply() {
-guard let item, let project = item.project else { return }
-isWorking = true
-Task.detached(priority:.userInitiated) {
-do {
-_ = try DevicePatchService.apply(project: project)
-await MainActor.run { isWorking = false }
-} catch {
-await MainActor.run { isWorking = false }
-}
-}
-}
-}
-
-extension View {
-func rotating(_ animating: Bool) -> some View {
-animation(.linear(duration: 1).repeatForever(autoreverses: false), value: animating)
-}
-}
-
-private struct PatchStorePresentationModifier: ViewModifier {
-@ObservedObject var store: PatchProjectStore
-
-func body(content: Content) -> some View {
-content
-.sheet(item: $store.passwordRequest, onDismiss: store.cancelUnlock) { request in
-PatchUnlockView(store: store, request: request)
-}
-}
-}
-
-extension View {
-func patchStorePresentation(_ store: PatchProjectStore) -> some View {
-modifier(PatchStorePresentationModifier(store: store))
-}
-}
-
-struct PatchUnlockView: View {
-@Environment(\.appLanguage) private var language
-@Environment(\.dismiss) private var dismiss
-@ObservedObject var store: PatchProjectStore
-let request: PatchPasswordRequest
-@State private var password = ""
-
-var body: some View {
-NavigationStack {
-Form {
-Section {
-SecureField(language.text("patch.password"), text: $password)
-.textContentType(.password)
-.submitLabel(.done)
-.onSubmit(unlock)
-.onChange(of: password) { _ in
-store.clearUnlockError()
-}
-if let errorKey = store.unlockErrorKey {
-Text(language.text(errorKey))
-.font(.footnote)
-.foregroundStyle(.red)
-}
-} footer: {
-if let origin = request.origin {
-Text(language.text("patch.password_repo_contact", origin.repositoryName))
-} else {
-Text(language.text("patch.password_once_message"))
-}
-}
-}
-.navigationTitle(language.text("patch.unlock"))
-.navigationBarTitleDisplayMode(.inline)
-.toolbar {
-ToolbarItem(placement:.cancellationAction) {
-Button(language.text("common.cancel")) { dismiss() }
-}
-ToolbarItem(placement:.confirmationAction) {
-Button(language.text("patch.unlock"), action: unlock)
-.disabled(password.isEmpty || store.isBusy)
-}
-}
-}
-}
-
-private func unlock() {
-guard!password.isEmpty else { return }
-store.unlock(password: password)
-}
-}
-``````swift
-VStack(alignment:.leading, spacing: 2) {
-Text(item.project?.name?? "Patch Desconhecido")
-.font(.headline)
-.foregroundStyle(.white)
-Text("Turn on to apply")
-.font(.caption)
-.foregroundStyle(.gray)
-}
-Spacer()
-Image(systemName: isExpanded? "chevron.up": "chevron.down")
-.foregroundStyle(.purple)
-}
-.padding()
-.background(Color(white: 0.05))
-.cornerRadius(12)
-.overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.purple.opacity(0.3), lineWidth: 1))
-.contentShape(Rectangle())
-.onTapGesture { withAnimation { isExpanded.toggle() } }
-
-if isExpanded {
-VStack(spacing: 15) {
-HStack {
-Text("PATCH INACTIVE")
-.font(.caption.bold())
-.foregroundStyle(.gray)
-Spacer()
-Toggle("", isOn: Binding(
-get: { false },
-set: { _ in
-applyPatch()
-}
-))
-.toggleStyle(SwitchToggleStyle(tint:.purple))
-}
-.padding(.top)
-}
-.padding()
-.background(Color(white: 0.08))
-.cornerRadius(12)
-}
-}
-}
-
-private func applyPatch() {
-Task {
-do {
-if let project = item.project {
-_ = try DevicePatchService.apply(project: project)
-}
-} catch {
-print("Erro ao aplicar: \(error)")
-}
-}
-}
-}
-
-struct CategoryItem {
-let name: String
-let icon: String
-let color: Color
-}
-
-private struct PatchProjectDetailView: View {
-@Environment(\.appLanguage) private var language
-@ObservedObject var store: PatchProjectStore
-let projectID: UUID
-@State private var isWorking = false
-
-private var item: PatchLibraryItem? {
-store.items.first(where: { $0.id == projectID })
-}
-
-var body: some View {
-ZStack {
-Color.black.ignoresSafeArea()
-VStack(spacing: 30) {
-VStack(spacing: 10) {
-Text(item?.project?.name?? "Patch")
-.font(.title.bold())
-.foregroundStyle(.white)
-Text("EXTERNAL SYSTEM")
-.font(.caption)
-.foregroundStyle(.purple)
-}
-.padding(.top, 50)
-
-Button(action: apply) {
-HStack {
-Image(systemName: isWorking? "arrow.clockwise": "checkmark.shield.fill")
-.rotating(isWorking)
-Text(isWorking? "APPLYING...": "APPLY PATCH")
-.fontWeight(.bold)
-}
-.font(.headline)
-.foregroundStyle(.white)
-.frame(maxWidth:.infinity)
-.padding()
-.background(Color.purple)
-.cornerRadius(15)
-.shadow(color:.purple.opacity(0.5), radius: 10, x: 0, y: 5)
-}
-.disabled(isWorking)
-.padding(.horizontal, 40)
-Spacer()
-}
-.padding()
-}
-}
-
-private func apply() {
-guard let item, let project = item.project else { return }
-isWorking = true
-Task.detached(priority:.userInitiated) {
-do {
-_ = try DevicePatchService.apply(project: project)
-await MainActor.run { isWorking = false }
-} catch {
-await MainActor.run { isWorking = false }
-}
-}
-}
-}
-
-extension View {
-func rotating(_ animating: Bool) -> some View {
-animation(.linear(duration: 1).repeatForever(autoreverses: false), value: animating)
-}
-}
-
-private struct PatchStorePresentationModifier: ViewModifier {
-@ObservedObject var store: PatchProjectStore
-
-func body(content: Content) -> some View {
-content
-.sheet(item: $store.passwordRequest, onDismiss: store.cancelUnlock) { request in
-PatchUnlockView(store: store, request: request)
-}
-}
-}
-
-extension View {
-func patchStorePresentation(_ store: PatchProjectStore) -> some View {
-modifier(PatchStorePresentationModifier(store: store))
-}
-}
-
-struct PatchUnlockView: View {
-@Environment(\.appLanguage) private var language
-@Environment(\.dismiss) private var dismiss
-@ObservedObject var store: PatchProjectStore
-let request: PatchPasswordRequest
-@State private var password = ""
-
-var body: some View {
-NavigationStack {
-Form {
-Section {
-SecureField(language.text("patch.password"), text: $password)
-.textContentType(.password)
-.submitLabel(.done)
-.onSubmit(unlock)
-.onChange(of: password) { _ in
-store.clearUnlockError()
-}
-if let errorKey = store.unlockErrorKey {
-Text(language.text(errorKey))
-.font(.footnote)
-.foregroundStyle(.red)
-}
-} footer: {
-if let origin = request.origin {
-Text(language.text("patch.password_repo_contact", origin.repositoryName))
-} else {
-Text(language.text("patch.password_once_message"))
-}
-}
-}
-.navigationTitle(language.text("patch.unlock"))
-.navigationBarTitleDisplayMode(.inline)
-.toolbar {
-ToolbarItem(placement:.cancellationAction) {
-Button(language.text("common.cancel")) { dismiss() }
-}
-ToolbarItem(placement:.confirmationAction) {
-Button(language.text("patch.unlock"), action: unlock)
-.disabled(password.isEmpty || store.isBusy)
-}
-}
-}
-}
-
-private func unlock() {
-guard!password.isEmpty else { return }
-store.unlock(password: password)
-}
+    private func unlock() {
+        guard !password.isEmpty else { return }
+        store.unlock(password: password)
+    }
 }
