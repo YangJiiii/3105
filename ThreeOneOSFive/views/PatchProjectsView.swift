@@ -1,217 +1,174 @@
 import SwiftUI
-import UIKit
 import UniformTypeIdentifiers
 
-private enum PatchPackagePickerPolicy {
-    static let packageType = UTType(filenameExtension: "3105") ?? .data
-    static let allowedContentTypes: [UTType] = [packageType, .data]
-    static let copiesSelectedDocument = true
-}
-
-private enum WallpaperPackagePickerPolicy {
-    static let packageType = UTType(filenameExtension: "tendies") ?? .data
-    static let allowedContentTypes: [UTType] = [packageType, .data]
-}
-
 struct PatchProjectsView: View {
-    @Environment(\.appLanguage) private var language
-    @EnvironmentObject private var draftCoordinator: PatchDraftCoordinator
-    @EnvironmentObject private var store: PatchProjectStore
-    @AppStorage(FeatureVisibility.cleanerStorageKey) private var cleanerEnabled = true
-    
+    @EnvironmentObject var store: PatchProjectStore
     @State private var selectedCategory: String? = nil
     @State private var searchText = ""
-    @State private var showImporter = false
-    @State private var showCreate = false
     
-    let onOpenSettings: () -> Void
-    let onOpenLogs: () -> Void
-
+    // Categorias configuradas para o Dashboard
     let categories = [
-        CategoryItem(name: "Cache", icon: "cpu", color: .blue),
-        CategoryItem(name: "Avatar", icon: "person.fill", color: .purple),
-        CategoryItem(name: "Holograma", icon: "sparkles", color: .cyan),
-        CategoryItem(name: "AI", icon: "brain", color: .orange),
-        CategoryItem(name: "Skin", icon: "tshirt.fill", color: .pink),
-        CategoryItem(name: "Externo", icon: "square.grid.2x2.fill", color: .green)
+        ("Cache", "cpu"),
+        ("Avatar", "person.fill"),
+        ("Holograma", "sparkles"),
+        ("AI", "brain"),
+        ("Skin", "tshirt.fill"),
+        ("Externo", "square.grid.2x2.fill")
     ]
-
-    private var filteredItems: [PatchLibraryItem] {
-        let items = store.items
+    
+    // Filtra os itens com base na categoria selecionada e na busca
+    var filteredItems: [PatchLibraryItem] {
+        var items = store.items
+        
+        if !searchText.isEmpty {
+            items = items.filter { $0.project?.name.localizedCaseInsensitiveContains(searchText) ?? false }
+        }
+        
         if let category = selectedCategory {
             return items.filter { $0.project?.name.localizedCaseInsensitiveContains(category) ?? false }
         }
-        if !searchText.isEmpty {
-            return items.filter { $0.project?.name.localizedCaseInsensitiveContains(searchText) ?? false }
-        }
+        
         return items
     }
-
+    
     var body: some View {
-        NavigationStack {
-            ZStack {
-                Color.black.ignoresSafeArea()
-                if selectedCategory == nil {
-                    dashboardView
-                } else {
-                    patchesListView
-                }
-            }
-            .navigationTitle(selectedCategory == nil ? "DASHBOARD" : selectedCategory!.uppercased())
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    if selectedCategory != nil {
-                        Button { selectedCategory = nil } label: {
-                            Image(systemName: "chevron.left").foregroundStyle(.white)
-                        }
-                    }
-                }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Menu {
-                        Button { showImporter = true } label: {
-                            Label("Importar", systemImage: "square.and.arrow.down")
-                        }
-                    } label: {
-                        Image(systemName: "ellipsis.circle.fill").foregroundStyle(.white)
-                    }
-                }
-            }
-            .sheet(isPresented: $showImporter) {
-                FileDocumentPicker(
-                    allowedContentTypes: PatchPackagePickerPolicy.allowedContentTypes,
-                    copiesSelectedDocument: PatchPackagePickerPolicy.copiesSelectedDocument,
-                    allowsMultipleSelection: false,
-                    onSelection: { result in
-                        showImporter = false
-                        if case .success(let urls) = result, let url = urls.first {
-                            store.importPackage(at: url)
-                        }
-                    },
-                    onCancel: { showImporter = false }
-                )
-                .ignoresSafeArea()
-            }
-        }
-    }
-
-    private var dashboardView: some View {
-        ScrollView {
+        ZStack {
+            // Fundo Preto Sólido (Estilo Gamer)
+            Color.black.ignoresSafeArea()
+            
             VStack(spacing: 25) {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("ESCOLHA UMA CATEGORIA")
-                        .font(.caption.bold())
-                        .foregroundStyle(.purple)
-                    Text("Patches disponíveis para FF")
-                        .font(.title2.bold())
-                        .foregroundStyle(.white)
-                    Text("Toque em uma opção para abrir os patches.")
-                        .font(.footnote)
-                        .foregroundStyle(.gray)
+                // Header
+                VStack(spacing: 8) {
+                    Text("DASHBOARD")
+                        .font(.system(size: 18, weight: .bold, design: .monospaced))
+                        .foregroundColor(.gray)
+                    
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("ESCOLHA UMA CATEGORIA")
+                                .font(.system(size: 12, weight: .bold))
+                                .foregroundColor(.purple)
+                            
+                            Text("Patches disponíveis para FF")
+                                .font(.system(size: 24, weight: .bold))
+                                .foregroundColor(.white)
+                            
+                            Text("Toque em uma opção para abrir os patches.")
+                                .font(.system(size: 14))
+                                .foregroundColor(.gray)
+                        }
+                        Spacer()
+                        
+                        Button(action: {
+                            // Ação do botão de menu (opcional)
+                        }) {
+                            Image(systemName: "ellipsis.circle.fill")
+                                .resizable()
+                                .frame(width: 30, height: 30)
+                                .foregroundColor(.white)
+                        }
+                    }
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal)
                 .padding(.top)
-
-                if store.items.isEmpty {
-                    VStack(spacing: 20) {
-                        Image(systemName: "square.and.arrow.down")
-                            .font(.system(size: 60))
-                            .foregroundStyle(.purple)
-                        
-                        Text("Nenhum Patch Instalado")
-                            .font(.title3.bold())
-                            .foregroundStyle(.white)
-                        
-                        Button {
-                            showImporter = true
-                        } label: {
-                            HStack {
-                                Image(systemName: "plus.circle.fill")
-                                Text("Importar Patch")
-                            }
-                            .fontWeight(.bold)
-                            .foregroundStyle(.white)
-                            .padding()
-                            .frame(maxWidth: 200)
-                            .background(Color.purple)
-                            .cornerRadius(15)
-                        }
-                    }
-                    .padding(.vertical, 50)
+                
+                // Barra de Busca
+                HStack {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundColor(.gray)
+                    TextField("Buscar patch...", text: $searchText)
+                        .foregroundColor(.white)
                 }
-
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 15) {
-                    ForEach(categories, id: \.name) { cat in
-                        CategoryCard(category: cat, count: countForCategory(cat.name)) {
-                            selectedCategory = cat.name
-                        }
-                    }
-                }
+                .padding()
+                .background(Color.white.opacity(0.1))
+                .cornerRadius(15)
                 .padding(.horizontal)
-            }
-        }
-    }
-
-    private var patchesListView: some View {
-        VStack {
-            AppSearchField(text: $searchText, prompt: "Buscar patch...", clearLabel: "Limpar")
-                .padding()
-            ScrollView {
-                VStack(spacing: 12) {
-                    if filteredItems.isEmpty {
-                        Text("Nenhum patch encontrado nesta categoria")
-                            .foregroundStyle(.gray)
-                            .padding(.vertical, 50)
-                    } else {
-                        ForEach(filteredItems) { item in
-                            PatchCard(item: item, store: store)
+                
+                if let category = selectedCategory {
+                    // VIEW DE LISTA DE PATCHES (Quando uma categoria é selecionada)
+                    VStack {
+                        HStack {
+                            Button(action: { selectedCategory = nil }) {
+                                Image(systemName: "chevron.left")
+                                    .foregroundColor(.white)
+                                    .padding()
+                            }
+                            Text(category)
+                                .font(.title2)
+                                .bold()
+                                .foregroundColor(.white)
+                            Spacer()
+                        }
+                        
+                        if filteredItems.isEmpty {
+                            VStack(spacing: 20) {
+                                Image(systemName: "folder.badge.questionmark")
+                                    .font(.system(size: 50))
+                                    .foregroundColor(.gray)
+                                Text("Nenhum patch encontrado nesta categoria")
+                                    .foregroundColor(.gray)
+                            }
+                            .frame(maxHeight: .infinity)
+                        } else {
+                            ScrollView {
+                                LazyVStack(spacing: 15) {
+                                    ForEach(filteredItems) { item in
+                                        PatchCard(item: item, store: store)
+                                    }
+                                }
+                                .padding()
+                            }
                         }
                     }
+                    .transition(.move(edge: .trailing))
+                } else {
+                    // GRID DE CATEGORIAS (Dashboard Principal)
+                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 15) {
+                        ForEach(categories, id: \.0) { category in
+                            Button(action: { selectedCategory = category.0 }) {
+                                HStack {
+                                    ZStack {
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .fill(Color.white.opacity(0.1))
+                                            .frame(width: 40, height: 40)
+                                        
+                                        Image(systemName: category.1)
+                                            .foregroundColor(.white)
+                                    }
+                                    
+                                    VStack(alignment: .leading) {
+                                        Text(category.0)
+                                            .font(.headline)
+                                            .foregroundColor(.white)
+                                        
+                                        // Contador de patches real baseado na store
+                                        Text("\(store.items.filter { $0.project?.name.localizedCaseInsensitiveContains(category.0) ?? false }.count) patches")
+                                            .font(.caption)
+                                            .foregroundColor(.gray)
+                                    }
+                                    Spacer()
+                                    Image(systemName: "chevron.right")
+                                        .font(.caption)
+                                        .foregroundColor(.gray)
+                                }
+                                .padding()
+                                .background(Color.white.opacity(0.05))
+                                .cornerRadius(15)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 15)
+                                        .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                                )
+                            }
+                        }
+                    }
+                    .padding()
+                    .transition(.move(edge: .leading))
                 }
-                .padding()
-            }
-        }
-    }
-
-    private func countForCategory(_ name: String) -> Int {
-        store.items.filter { $0.project?.name.localizedCaseInsensitiveContains(name) ?? false }.count
-    }
-}
-
-struct CategoryCard: View {
-    let category: CategoryItem
-    let count: Int
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            HStack {
-                Image(systemName: category.icon)
-                    .font(.title2)
-                    .foregroundStyle(category.color)
-                    .frame(width: 40, height: 40)
-                    .background(category.color.opacity(0.2))
-                    .cornerRadius(8)
-                VStack(alignment: .leading) {
-                    Text(category.name)
-                        .font(.headline)
-                        .foregroundStyle(.white)
-                    Text("\(count) patches")
-                        .font(.caption)
-                        .foregroundStyle(.gray)
-                }
+                
                 Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.caption)
-                    .foregroundStyle(.gray)
             }
-            .padding()
-            .background(Color(white: 0.1))
-            .cornerRadius(15)
-            .overlay(RoundedRectangle(cornerRadius: 15).stroke(category.color.opacity(0.5), lineWidth: 1))
         }
-        .buttonStyle(.plain)
+        .animation(.spring(), value: selectedCategory)
     }
 }
 
@@ -219,210 +176,68 @@ struct PatchCard: View {
     let item: PatchLibraryItem
     let store: PatchProjectStore
     @State private var isExpanded = false
-
+    
     var body: some View {
-        VStack(spacing: 0) {
+        VStack(alignment: .leading, spacing: 10) {
             HStack {
                 ZStack {
                     RoundedRectangle(cornerRadius: 8)
                         .fill(Color.black)
                         .frame(width: 50, height: 50)
-                        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.purple, lineWidth: 1))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(Color.purple, lineWidth: 1)
+                        )
+                    
                     Image(systemName: "skull")
-                        .foregroundStyle(.white)
-                        .font(.title2)
+                        .foregroundColor(.white)
                 }
+                
                 VStack(alignment: .leading, spacing: 2) {
                     Text(item.project?.name ?? "Patch Desconhecido")
                         .font(.headline)
-                        .foregroundStyle(.white)
-                    Text("Turn on to apply")
+                        .foregroundColor(.white)
+                    
+                    Text(item.project?.author ?? "Autor Desconhecido")
                         .font(.caption)
-                        .foregroundStyle(.gray)
+                        .foregroundColor(.gray)
                 }
+                
                 Spacer()
-                Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
-                    .foregroundStyle(.purple)
+                
+                Button(action: { isExpanded.toggle() }) {
+                    Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                        .foregroundColor(.gray)
+                }
             }
-            .padding()
-            .background(Color(white: 0.05))
-            .cornerRadius(12)
-            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.purple.opacity(0.3), lineWidth: 1))
-            .contentShape(Rectangle())
-            .onTapGesture { withAnimation { isExpanded.toggle() } }
-
+            
             if isExpanded {
                 VStack(spacing: 15) {
+                    Divider().background(Color.gray)
+                    
                     HStack {
-                        Text("PATCH INACTIVE")
-                            .font(.caption.bold())
-                            .foregroundStyle(.gray)
+                        Text("Ativar Patch")
+                            .foregroundColor(.white)
                         Spacer()
                         Toggle("", isOn: Binding(
-                            get: { false },
-                            set: { _ in applyPatch() }
+                            get: { item.project?.isEnabled ?? false },
+                            set: { newValue in
+                                // Aqui chama a função de aplicar o patch
+                                store.togglePatch(item: item, enabled: newValue)
+                            }
                         ))
                         .toggleStyle(SwitchToggleStyle(tint: .purple))
                     }
-                    .padding(.top)
                 }
-                .padding()
-                .background(Color(white: 0.08))
-                .cornerRadius(12)
+                .padding(.top, 5)
             }
         }
-    }
-
-    private func applyPatch() {
-        Task {
-            do {
-                if let project = item.project {
-                    _ = try DevicePatchService.apply(project: project)
-                }
-            } catch {
-                print("Erro ao aplicar: \(error)")
-            }
-        }
-    }
-}
-
-struct CategoryItem {
-    let name: String
-    let icon: String
-    let color: Color
-}
-
-private struct PatchProjectDetailView: View {
-    @Environment(\.appLanguage) private var language
-    @ObservedObject var store: PatchProjectStore
-    let projectID: UUID
-    @State private var isWorking = false
-
-    private var item: PatchLibraryItem? {
-        store.items.first(where: { $0.id == projectID })
-    }
-
-    var body: some View {
-        ZStack {
-            Color.black.ignoresSafeArea()
-            VStack(spacing: 30) {
-                VStack(spacing: 10) {
-                    Text(item?.project?.name ?? "Patch")
-                        .font(.title.bold())
-                        .foregroundStyle(.white)
-                    Text("EXTERNAL SYSTEM")
-                        .font(.caption)
-                        .foregroundStyle(.purple)
-                }
-                .padding(.top, 50)
-
-                Button(action: apply) {
-                    HStack {
-                        Image(systemName: isWorking ? "arrow.clockwise" : "checkmark.shield.fill")
-                            .rotating(isWorking)
-                        Text(isWorking ? "APPLYING..." : "APPLY PATCH")
-                            .fontWeight(.bold)
-                    }
-                    .font(.headline)
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.purple)
-                    .cornerRadius(15)
-                    .shadow(color: .purple.opacity(0.5), radius: 10, x: 0, y: 5)
-                }
-                .disabled(isWorking)
-                .padding(.horizontal, 40)
-                Spacer()
-            }
-            .padding()
-        }
-    }
-
-    private func apply() {
-        guard let item, let project = item.project else { return }
-        isWorking = true
-        Task.detached(priority: .userInitiated) {
-            do {
-                _ = try DevicePatchService.apply(project: project)
-                await MainActor.run { isWorking = false }
-            } catch {
-                await MainActor.run { isWorking = false }
-            }
-        }
-    }
-}
-
-extension View {
-    func rotating(_ animating: Bool) -> some View {
-        animation(.linear(duration: 1).repeatForever(autoreverses: false), value: animating)
-    }
-}
-
-private struct PatchStorePresentationModifier: ViewModifier {
-    @ObservedObject var store: PatchProjectStore
-
-    func body(content: Content) -> some View {
-        content
-            .sheet(item: $store.passwordRequest, onDismiss: store.cancelUnlock) { request in
-                PatchUnlockView(store: store, request: request)
-            }
-    }
-}
-
-extension View {
-    func patchStorePresentation(_ store: PatchProjectStore) -> some View {
-        modifier(PatchStorePresentationModifier(store: store))
-    }
-}
-
-struct PatchUnlockView: View {
-    @Environment(\.appLanguage) private var language
-    @Environment(\.dismiss) private var dismiss
-    @ObservedObject var store: PatchProjectStore
-    let request: PatchPasswordRequest
-    @State private var password = ""
-
-    var body: some View {
-        NavigationStack {
-            Form {
-                Section {
-                    SecureField(language.text("patch.password"), text: $password)
-                        .textContentType(.password)
-                        .submitLabel(.done)
-                        .onSubmit(unlock)
-                        .onChange(of: password) { _ in
-                            store.clearUnlockError()
-                        }
-                    if let errorKey = store.unlockErrorKey {
-                        Text(language.text(errorKey))
-                            .font(.footnote)
-                            .foregroundStyle(.red)
-                    }
-                } footer: {
-                    if let origin = request.origin {
-                        Text(language.text("patch.password_repo_contact", origin.repositoryName))
-                    } else {
-                        Text(language.text("patch.password_once_message"))
-                    }
-                }
-            }
-            .navigationTitle(language.text("patch.unlock"))
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button(language.text("common.cancel")) { dismiss() }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(language.text("patch.unlock"), action: unlock)
-                        .disabled(password.isEmpty || store.isBusy)
-                }
-            }
-        }
-    }
-
-    private func unlock() {
-        guard !password.isEmpty else { return }
-        store.unlock(password: password)
+        .padding()
+        .background(Color.white.opacity(0.05))
+        .cornerRadius(15)
+        .overlay(
+            RoundedRectangle(cornerRadius: 15)
+                .stroke(Color.white.opacity(0.1), lineWidth: 1)
+        )
     }
 }
