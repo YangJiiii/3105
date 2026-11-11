@@ -225,7 +225,7 @@ struct PatchCard: View {
                         Toggle("", isOn: Binding(
                             get: { item.project?.isEnabled ?? false },
                             set: { newValue in
-                                store.togglePatch(item: item,enabled: newValue
+                                store.togglePatch(item: item,enabled: newValue)
                             }
                         ))
                         .toggleStyle(SwitchToggleStyle(tint: .purple))
