@@ -11,7 +11,6 @@ struct ContentView: View {
                 
                 // A PatchProjectsView é a tela principal que contém o Dashboard e a lista de patches
                PatchProjectsView()
-                .patchStorePresentation(store) // Mantém a lógica de pedido de senha dos patches
             }
             .navigationTitle("GH777 EXTERNAL") // Título exatamente como na sua foto
             .navigationBarTitleDisplayMode(.inline)
