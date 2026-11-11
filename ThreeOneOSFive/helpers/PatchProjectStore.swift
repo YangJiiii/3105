@@ -39,28 +39,40 @@ final class PatchProjectStore: ObservableObject {
 
     private var pendingUnlock: PendingUnlock?
 
-        init() {
+            init() {
         isBusy = true
         Task.detached(priority: .userInitiated) { [weak self] in
-            // 1. Primeiro, carrega os patches que o usuário já importou manualmente
+            // Carrega o que já está no iPhone
             let loadedItems = PatchProjectLibrary.load()
             
-            // 2. Agora, a mágica: busca arquivos .3105 embutidos no App (Bundle)
+            // PROCURA OS PATCHS EMBUTIDOS NO APP
+            var bundleItems: [PatchLibraryItem] = []
             if let bundleURLs = Bundle.main.urls(forResourcesWithExtension: "3105", subdirectory: nil) {
                 for url in bundleURLs {
                     do {
                         let data = try Data(contentsOf: url)
-                        // Importa automaticamente cada arquivo encontrado para a biblioteca do app
-                        _ = try await self?.importPackage(data: data)
+                        let summary = try PatchPackageCodec.inspect(data)
+                        
+                        let item = PatchLibraryItem(
+                            id: summary.packageID,
+                            packageURL: url,
+                            summary: summary,
+                            contentKey: nil, 
+                            origin: .local 
+                        )
+                        bundleItems.append(item)
                     } catch {
-                        print("Erro ao carregar patch embutido: \(url.lastPathComponent)")
+                        print("Erro ao ler: \(url.lastPathComponent)")
                     }
                 }
             }
             
-            await self?.finishInitialLoad(loadedItems)
+            // JUNTA TUDO E MOSTRA NA TELA
+            let finalItems = loadedItems + bundleItems
+            await self?.finishInitialLoad(finalItems)
         }
     }
+
 
 
     // --- FUNÇÃO DE FILTRAGEM PARA AS ABAS ---
