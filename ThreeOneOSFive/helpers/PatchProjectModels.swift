@@ -48,7 +48,7 @@ struct PatchProject: Codable, Identifiable, Hashable {
     var id: UUID
     var name: String
     var author: String
-    var isenabled: Bool = false
+    var isEnabled: Bool = false
     var isPrivate: Bool
     var createdAt: Date
     var updatedAt: Date
