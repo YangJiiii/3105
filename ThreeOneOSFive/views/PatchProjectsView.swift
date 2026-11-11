@@ -68,17 +68,16 @@ struct PatchProjectsView: View {
                     }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Menu {
-                        Button { showImporter = true } label: {
-                            Label("Importar", systemImage: "square.and.arrow.down")
-                        }
-                        Button { showCreate = true } label: {
-                            Label("Novo", systemImage: "plus")
-                        }
-                    } label: {
-                        Image(systemName: "ellipsis.circle.fill").foregroundStyle(.white)
-                    }
-                }
+    Menu {
+        Button { showImporter = true } label: {
+            Label("Importar", systemImage: "square.and.arrow.down")
+        }
+        // O botão "Novo" foi removido daqui
+    } label: {
+        Image(systemName: "ellipsis.circle.fill").foregroundStyle(.white)
+    }
+}
+
             }
             .sheet(isPresented: $showImporter) {
                 FileDocumentPicker(
@@ -104,34 +103,64 @@ struct PatchProjectsView: View {
     }
 
     private var dashboardView: some View {
-        ScrollView {
-            VStack(spacing: 25) {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("ESCOLHA UMA CATEGORIA")
-                        .font(.caption.bold())
-                        .foregroundStyle(.purple)
-                    Text("Patches disponíveis para FF")
-                        .font(.title2.bold())
-                        .foregroundStyle(.white)
-                    Text("Toque em uma opção para abrir os patches.")
-                        .font(.footnote)
-                        .foregroundStyle(.gray)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal)
-                .padding(.top)
+    ScrollView {
+        VStack(spacing: 25) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("ESCOLHA UMA CATEGORIA")
+                    .font(.caption.bold())
+                    .foregroundStyle(.purple)
+                Text("Patches disponíveis para FF")
+                    .font(.title2.bold())
+                    .foregroundStyle(.white)
+                Text("Toque em uma opção para abrir os patches.")
+                    .font(.footnote)
+                    .foregroundStyle(.gray)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal)
+            .padding(.top)
 
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 15) {
-                    ForEach(categories, id: \.name) { cat in
-                        CategoryCard(category: cat, count: countForCategory(cat.name)) {
-                            selectedCategory = cat.name
+            // Se não houver patches instalados, mostra o botão de Importar no centro
+            if store.items.isEmpty {
+                VStack(spacing: 20) {
+                    Image(systemName: "square.and.arrow.down")
+                        .font(.system(size: 60))
+                        .foregroundStyle(.purple)
+                    
+                    Text("Nenhum Patch Instalado")
+                        .font(.title3.bold())
+                        .foregroundStyle(.white)
+                    
+                    Button {
+                        showImporter = true
+                    } label: {
+                        HStack {
+                            Image(systemName: "plus.circle.fill")
+                            Text("Importar Patch")
                         }
+                        .fontWeight(.bold)
+                        .foregroundStyle(.white)
+                        .padding()
+                        .frame(maxWidth: 200)
+                        .background(Color.purple)
+                        .cornerRadius(15)
                     }
                 }
-                .padding(.horizontal)
+                .padding(.vertical, 50)
             }
+
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 15) {
+                ForEach(categories, id: \.name) { cat in
+                    CategoryCard(category: cat, count: countForCategory(cat.name)) {
+                        selectedCategory = cat.name
+                    }
+                }
+            }
+            .padding(.horizontal)
         }
     }
+}
+
 
     private var patchesListView: some View {
         VStack {
