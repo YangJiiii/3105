@@ -10,14 +10,7 @@ struct ContentView: View {
                 Color.black.ignoresSafeArea()
                 
                 // A PatchProjectsView é a tela principal que contém o Dashboard e a lista de patches
-                PatchProjectsView(
-                    onOpenSettings: {
-                        // Ação para abrir configurações, se houver
-                    },
-                    onOpenLogs: {
-                        // Ação para abrir logs, se houver
-                    }
-                )
+               PatchProjectsView()
                 .patchStorePresentation(store) // Mantém a lógica de pedido de senha dos patches
             }
             .navigationTitle("GH777 EXTERNAL") // Título exatamente como na sua foto
