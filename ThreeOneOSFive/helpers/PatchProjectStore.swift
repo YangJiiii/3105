@@ -39,13 +39,11 @@ final class PatchProjectStore: ObservableObject {
 
     private var pendingUnlock: PendingUnlock?
 
-            init() {
+                init() {
         isBusy = true
         Task.detached(priority: .userInitiated) { [weak self] in
-            // Carrega o que já está no iPhone
             let loadedItems = PatchProjectLibrary.load()
             
-            // PROCURA OS PATCHS EMBUTIDOS NO APP
             var bundleItems: [PatchLibraryItem] = []
             if let bundleURLs = Bundle.main.urls(forResourcesWithExtension: "3105", subdirectory: nil) {
                 for url in bundleURLs {
@@ -53,12 +51,13 @@ final class PatchProjectStore: ObservableObject {
                         let data = try Data(contentsOf: url)
                         let summary = try PatchPackageCodec.inspect(data)
                         
+                        // Ajustado para a estrutura real do seu projeto
                         let item = PatchLibraryItem(
-                            id: summary.packageID,
-                            packageURL: url,
                             summary: summary,
                             contentKey: nil, 
-                            origin: .local 
+                            packageURL: url,
+                            isAuthorCopy: false,
+                            origin: nil
                         )
                         bundleItems.append(item)
                     } catch {
@@ -66,6 +65,12 @@ final class PatchProjectStore: ObservableObject {
                     }
                 }
             }
+            
+            let finalItems = loadedItems + bundleItems
+            await self?.finishInitialLoad(finalItems)
+        }
+    }
+
             
             // JUNTA TUDO E MOSTRA NA TELA
             let finalItems = loadedItems + bundleItems
