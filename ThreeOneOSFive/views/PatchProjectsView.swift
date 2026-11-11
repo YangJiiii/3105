@@ -217,7 +217,7 @@ struct CategoryCard: View {
 
 struct PatchCard: View {
     let item: PatchLibraryItem
-    : PatchProjectStore
+    let store: PatchProjectStore
     @State private var isExpanded = false
 
     var body: some View {
