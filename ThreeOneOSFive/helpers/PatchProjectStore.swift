@@ -465,4 +465,9 @@ final class PatchProjectStore: ObservableObject {
             messageArgument: error.localizationArgument
         )
     }
+    // ... (resto do código que já existe no arquivo) ...
+
+    func togglePatch(item: PatchLibraryItem, enabled: Bool) {
+        print("Alterando estado do patch para \(enabled)")
+    }
 }
