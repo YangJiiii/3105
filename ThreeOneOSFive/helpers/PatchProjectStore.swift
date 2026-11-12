@@ -39,7 +39,7 @@ final class PatchProjectStore: ObservableObject {
 
     private var pendingUnlock: PendingUnlock?
 
-        init() {
+            init() {
         isBusy = true
         Task.detached(priority: .userInitiated) { [weak self] in
             // 1. Carrega itens salvos internamente
@@ -47,29 +47,25 @@ final class PatchProjectStore: ObservableObject {
             var bundleItems: [PatchLibraryItem] = []
             
             // 2. Busca BRUTA por arquivos .3105 na raiz do Bundle
-            // Usamos urls(forResourcesWithExtension) que é o método oficial e mais seguro do iOS
             let urls = Bundle.main.urls(forResourcesWithExtension: "3105", subdirectory: nil) ?? []
             
             for url in urls {
                 do {
                     let data = try Data(contentsOf: url)
                     
-                    // Tentamos inspecionar o pacote. Se falhar, criamos um item genérico 
-                    // para que o arquivo APAREÇA no app de qualquer jeito.
                     let summary: PatchPackageSummary
                     do {
                         summary = try PatchPackageCodec.inspect(data)
                     } catch {
-                        // Se o inspect falhar, cria um sumário manual baseado no nome do arquivo
+                        // CORREÇÃO: Usando exatamente os parâmetros que o seu PatchProjectModels exige
                         let fileName = url.deletingPathExtension().lastPathComponent
                         summary = PatchPackageSummary(
                             packageID: UUID(), 
-                            name: fileName, 
-                            version: "1.0", 
+                            schemaVersion: 1, 
                             isPasswordProtected: false, 
-                            schemaVersion: 1
+                            keyFingerprint: nil
                         )
-                        print("Aviso: Arquivo \(fileName) não segue o padrão de pacote, mas será exibido.")
+                        print("Aviso: Arquivo \(fileName) não segue o padrão, mas será exibido.")
                     }
                     
                     let item = PatchLibraryItem(
@@ -89,6 +85,7 @@ final class PatchProjectStore: ObservableObject {
             await self?.finishInitialLoad(finalItems)
         }
     }
+
 
 
         func filterProjects(for section: AppSection) {
