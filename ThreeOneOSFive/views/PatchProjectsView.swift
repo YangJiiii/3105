@@ -208,3 +208,38 @@ extension View {
         modifier(PatchStorePresentationModifier(store: store))
     }
 }
+
+struct PatchUnlockView: View {
+    @ObservedObject var store: PatchProjectStore
+    let request: PatchUnlockRequest
+    @State private var password = ""
+
+    var body: some View {
+        VStack(spacing: 20) {
+            Text("Unlock Patch").font(.headline).foregroundColor(.white)
+            Text("Please enter the password to access this project").font(.subheadline).foregroundColor(.gray).multilineTextAlignment(.center)
+            
+            SecureField("Password", text: $password)
+                .textFieldStyle(.roundedBorder)
+                .padding(.horizontal)
+
+            Button {
+                store.verifyUnlock(request: request, password: password)
+                password = ""
+            } label: {
+                Text("Unlock")
+                    .bold()
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.purple)
+                    .foregroundColor(.white)
+                    .cornerRadius(12)
+            }
+            .padding(.horizontal)
+        }
+        .padding()
+        .frame(maxWidth: 300)
+        .background(Color.black.opacity(0.8))
+        .cornerRadius(20)
+    }
+}
