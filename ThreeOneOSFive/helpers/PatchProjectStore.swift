@@ -24,7 +24,7 @@ struct PatchStoreAlert: Identifiable {
 final class PatchProjectStore: ObservableObject {
     @Published private(set) var items: [PatchLibraryItem] = []
     @Published private(set) var allItems: [PatchLibraryItem] = []
-    @Published var currentSection: AppSection = .home // Rastreia a aba ativa para manter o filtro
+    @Published var currentSection: AppSection = .home 
     @Published private(set) var isBusy = false
     @Published var passwordRequest: PatchPasswordRequest?
     @Published var alert: PatchStoreAlert?
@@ -39,41 +39,48 @@ final class PatchProjectStore: ObservableObject {
 
     private var pendingUnlock: PendingUnlock?
 
-                    init() {
+    init() {
         isBusy = true
         Task.detached(priority: .userInitiated) { [weak self] in
             let loadedItems = PatchProjectLibrary.load()
             
             var bundleItems: [PatchLibraryItem] = []
-            if let bundleURLs = Bundle.main.urls(forResourcesWithExtension: "3105", subdirectory: nil) {
-                for url in bundleURLs {
-                    do {
-                        let data = try Data(contentsOf: url)
-                        let summary = try PatchPackageCodec.inspect(data)
+            
+            // --- INÍCIO DA VARREDURA PROFUNDA ---
+            let fileManager = FileManager.default
+            let bundlePath = Bundle.main.bundlePath
+            
+            if let enumerator = fileManager.enumerator(atPath: bundlePath) {
+                while let filePath = enumerator.nextObject() as? String {
+                    if filePath.hasSuffix(".3105") {
+                        let fullPath = (bundlePath as NSString).appendingPathComponent(filePath)
+                        let url = URL(fileURLWithPath: fullPath)
                         
-                        let item = PatchLibraryItem(
-                            summary: summary,
-                            contentKey: nil, 
-                            packageURL: url,
-                            isAuthorCopy: false,
-                            origin: nil
-                        )
-                        bundleItems.append(item)
-                    } catch {
-                        print("Erro ao ler: \(url.lastPathComponent)")
+                        do {
+                            let data = try Data(contentsOf: url)
+                            let summary = try PatchPackageCodec.inspect(data)
+                            
+                            let item = PatchLibraryItem(
+                                summary: summary,
+                                contentKey: nil, 
+                                packageURL: url,
+                                isAuthorCopy: false,
+                                origin: nil
+                            )
+                            bundleItems.append(item)
+                        } catch {
+                            print("Erro ao ler arquivo: \(url.lastPathComponent)")
+                        }
                     }
                 }
             }
+            // --- FIM DA VARREDURA PROFUNDA ---
             
             let finalItems = loadedItems + bundleItems
             await self?.finishInitialLoad(finalItems)
         }
     }
 
-
-
-
-    // --- FUNÇÃO DE FILTRAGEM PARA AS ABAS ---
     func filterProjects(for section: AppSection) {
         switch section {
         case .home:
@@ -205,6 +212,9 @@ final class PatchProjectStore: ObservableObject {
                     await self?.requestPassword(pending: pending)
                 } else {
                     await self?.finishOperation(successMessageKey: "patch.imported_message")
+                }
+            } catch let error as PatchPackageError {
+                awaitself?.finishOperation(successMessageKey: "patch.imported_message")
                 }
             } catch let error as PatchPackageError {
                 await self?.failOperation(error)
@@ -491,7 +501,6 @@ final class PatchProjectStore: ObservableObject {
             messageArgument: error.localizationArgument
         )
     }
-    // ... (resto do código que já existe no arquivo) ...
 
     func togglePatch(item: PatchLibraryItem, enabled: Bool) {
         print("Alterando estado do patch para \(enabled)")
