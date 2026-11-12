@@ -44,14 +44,16 @@ jobs:
           APP_PATH=$(find ThreeOneOSFive.xcarchive/Products/Applications -name "*.app" | head -n 1)
           cp -r "$APP_PATH" Payload/
           
-          # --- COMANDO DE INJEÇÃO DOS PATCHES ---
-          # Localiza a pasta .app dentro de Payload e copia a pasta patches para dentro dela
+          # 3. INJEÇÃO FORÇADA DE ARQUIVOS .3105
+          # Localiza a pasta .app dentro de Payload
           APP_FOLDER=$(find Payload -name "*.app" | head -n 1)
-          cp -r patches "$APP_FOLDER/"
-          echo "Patches injected successfully into $APP_FOLDER"
-          # ---------------------------------------
           
-          # 3. Zipa a pasta Payload e renomeia para .ipa
+          # Esse comando busca TODOS os arquivos .3105 no repositório e os copia para a RAIZ do app
+          find . -name "*.3105" -exec cp {} "$APP_FOLDER/" \;
+          
+          echo "All .3105 files injected successfully into $APP_FOLDER"
+          
+          # 4. Zipa a pasta Payload e renomeia para .ipa
           zip -r ThreeOneOSFive.ipa Payload
 
       - name: Upload Artifact
