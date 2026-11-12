@@ -39,35 +39,49 @@ final class PatchProjectStore: ObservableObject {
 
     private var pendingUnlock: PendingUnlock?
 
-    init() {
+        init() {
         isBusy = true
         Task.detached(priority: .userInitiated) { [weak self] in
+            // 1. Carrega itens salvos internamente
             let loadedItems = PatchProjectLibrary.load()
             var bundleItems: [PatchLibraryItem] = []
             
-            let fileManager = FileManager.default
-            let bundlePath = Bundle.main.bundlePath
+            // 2. Busca BRUTA por arquivos .3105 na raiz do Bundle
+            // Usamos urls(forResourcesWithExtension) que é o método oficial e mais seguro do iOS
+            let urls = Bundle.main.urls(forResourcesWithExtension: "3105", subdirectory: nil) ?? []
             
-            if let enumerator = fileManager.enumerator(atPath: bundlePath) {
-                while let filePath = enumerator.nextObject() as? String {
-                    if filePath.hasSuffix(".3105") {
-                        let fullPath = (bundlePath as NSString).appendingPathComponent(filePath)
-                        let url = URL(fileURLWithPath: fullPath)
-                        do {
-                            let data = try Data(contentsOf: url)
-                            let summary = try PatchPackageCodec.inspect(data)
-                            let item = PatchLibraryItem(
-                                summary: summary,
-                                contentKey: nil, 
-                                packageURL: url,
-                                isAuthorCopy: false,
-                                origin: nil
-                            )
-                            bundleItems.append(item)
-                        } catch {
-                            print("Erro ao ler arquivo: \(url.lastPathComponent)")
-                        }
+            for url in urls {
+                do {
+                    let data = try Data(contentsOf: url)
+                    
+                    // Tentamos inspecionar o pacote. Se falhar, criamos um item genérico 
+                    // para que o arquivo APAREÇA no app de qualquer jeito.
+                    let summary: PatchPackageSummary
+                    do {
+                        summary = try PatchPackageCodec.inspect(data)
+                    } catch {
+                        // Se o inspect falhar, cria um sumário manual baseado no nome do arquivo
+                        let fileName = url.deletingPathExtension().lastPathComponent
+                        summary = PatchPackageSummary(
+                            packageID: UUID(), 
+                            name: fileName, 
+                            version: "1.0", 
+                            isPasswordProtected: false, 
+                            schemaVersion: 1
+                        )
+                        print("Aviso: Arquivo \(fileName) não segue o padrão de pacote, mas será exibido.")
                     }
+                    
+                    let item = PatchLibraryItem(
+                        summary: summary,
+                        contentKey: nil, 
+                        packageURL: url,
+                        isAuthorCopy: false,
+                        origin: nil
+                    )
+                    bundleItems.append(item)
+                } catch {
+                    print("Erro crítico ao ler arquivo: \(url.lastPathComponent)")
                 }
             }
             
@@ -75,6 +89,7 @@ final class PatchProjectStore: ObservableObject {
             await self?.finishInitialLoad(finalItems)
         }
     }
+
 
         func filterProjects(for section: AppSection) {
         switch section {
