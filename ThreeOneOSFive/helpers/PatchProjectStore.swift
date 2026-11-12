@@ -87,26 +87,30 @@ final class PatchProjectStore: ObservableObject {
 
 
 
-        func filterProjects(for section: AppSection) {
+            func filterProjects(for section: AppSection) {
         switch section {
         case .home:
-            // REMOVIDO O FILTRO "HS": Agora mostra todos os patches encontrados no bundle
+            // Home é a vitrine: Mostra TUDO que foi encontrado no bundle e no app
             items = allItems
         case .new:
+            // Filtra apenas o que for Painel
             items = allItems.filter { $0.project?.name.localizedCaseInsensitiveContains("PAINEL") ?? false }
         case .sources:
+            // Filtra apenas o que for Holograma
             items = allItems.filter { $0.project?.name.localizedCaseInsensitiveContains("HOLOGRAMAS") ?? false }
         case .installed:
+            // Mostra tudo, EXCETO o que já caiu nas categorias acima (Painel/Hologramas)
+            // Removido o bloqueio de "HS" para que seus patches de pescoço/antena apareçam aqui
             items = allItems.filter { item in
                 let name = item.project?.name ?? ""
-                return !name.localizedCaseInsensitiveContains("HS") && 
-                       !name.localizedCaseInsensitiveContains("PAINEL") && 
+                return !name.localizedCaseInsensitiveContains("PAINEL") && 
                        !name.localizedCaseInsensitiveContains("HOLOGRAMAS")
             }
         default:
             items = allItems
         }
     }
+
 
 
     func reload() {
