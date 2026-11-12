@@ -39,7 +39,7 @@ final class PatchProjectStore: ObservableObject {
 
     private var pendingUnlock: PendingUnlock?
 
-            init() {
+                init() {
         isBusy = true
         Task.detached(priority: .userInitiated) { [weak self] in
             // 1. Carrega itens salvos internamente
@@ -57,15 +57,14 @@ final class PatchProjectStore: ObservableObject {
                     do {
                         summary = try PatchPackageCodec.inspect(data)
                     } catch {
-                        // CORREÇÃO: Usando exatamente os parâmetros que o seu PatchProjectModels exige
-                        let fileName = url.deletingPathExtension().lastPathComponent
+                        // CORREÇÃO FINAL: Passando Data() vazio em vez de nil para o keyFingerprint
                         summary = PatchPackageSummary(
                             packageID: UUID(), 
                             schemaVersion: 1, 
                             isPasswordProtected: false, 
-                            keyFingerprint: nil
+                            keyFingerprint: Data() 
                         )
-                        print("Aviso: Arquivo \(fileName) não segue o padrão, mas será exibido.")
+                        print("Aviso: Arquivo \(url.lastPathComponent) forçado para exibição.")
                     }
                     
                     let item = PatchLibraryItem(
