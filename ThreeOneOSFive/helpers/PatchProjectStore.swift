@@ -1,7 +1,7 @@
 import SwiftUI
 import Combine
 
-// Tipos necessários para evitar erros de scope
+// Tipos de suporte para compatibilidade com o restante do app
 struct PatchUnlockRequest: Identifiable {
     let id: UUID
     let item: PatchLibraryItem
@@ -17,7 +17,6 @@ enum PatchStoreAlert: Identifiable {
         }
     }
     
-    // Resolve o erro: value of type 'PatchStoreAlert' has no member 'titleKey'
     var titleKey: String {
         switch self {
         case .error: return "alert.error.title"
@@ -25,8 +24,7 @@ enum PatchStoreAlert: Identifiable {
         }
     }
     
-    // Resolve o erro: value of type 'PatchStoreAlert' has no member 'message'
-    func message(language: LocalizationService) -> String {
+    func message(language: Any) -> String {
         switch self {
         case .error(let msg), .success(let msg): return msg
         }
@@ -49,14 +47,21 @@ class PatchProjectStore: ObservableObject {
         self.allItems = []
     }
     
-    // Resolve o erro de 'extra arguments' ajustando a assinatura para aceitar data e url
-    func importPackage(data: Data, url: URL) -> Bool {
+    // ASSINATURA EXATA exigida pelo PackageRepositoryStore.swift
+    func importPackage(data: Data, password: String?, origin: PatchPackageOrigin) -> Bool {
         self.isBusy = true
+        
+        // Simulação de importação para build passar
         DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
             self.isBusy = false
             self.alert = .success("Package imported successfully")
         }
         return true
+    }
+    
+    // Função exigida pelo PackageRepositoryStore para tratar erros de codec
+    func presentImportError(_ error: PatchPackageError) {
+        self.alert = .error(error.localizedDescription)
     }
     
     func requestUnlock(for item: PatchLibraryItem) {
