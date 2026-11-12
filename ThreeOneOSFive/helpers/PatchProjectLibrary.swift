@@ -48,7 +48,15 @@ enum PatchProjectLibrary {
         let root = base.appendingPathComponent("PatchProjects", isDirectory: true)
         try fileManager.createDirectory(at: root, withIntermediateDirectories: true)
         return root
+        static func setPatchEnabled(_ packageID: UUID, enabled: Bool) throws {
+        let defaults = UserDefaults.standard
+        defaults.set(enabled, forKey: "patch_enabled_\(packageID.uuidString)")
     }
+
+    static func isPatchEnabled(_ packageID: UUID) -> Bool {
+        return UserDefaults.standard.bool(forKey: "patch_enabled_\(packageID.uuidString)")
+    }
+}
 
     static func backupRootURL(fileManager: FileManager = .default) throws -> URL {
         let root = try packageRootURL(fileManager: fileManager)
