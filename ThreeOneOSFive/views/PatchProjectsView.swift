@@ -10,59 +10,125 @@ enum AppTab {
 }
 
 struct PatchProjectsView: View {
-    @EnvironmentObject var store: PatchProjectStore
+    @Environment(\.appLanguage) private var language
+    @EnvironmentObject private var draftCoordinator: PatchDraftCoordinator
+    @EnvironmentObject private var store: PatchProjectStore
+    
     @State private var activeTab: AppTab = .dashboard
-    @State private var selectedCategory: String? = nil
-    @State private var searchText = ""
-    
-    let categories = [
-        ("Avatar", "person.fill", "AVT_"),
-        ("Cache", "cpu", "CCH_"),
-        ("Holograma", "sparkles", "HOL_"),
-        ("AI", "brain", "AI_"),
-        ("Skin", "tshirt.fill", "TEX_"),
-        ("Externo", "square.grid.2x2.fill", "EXT_")
-    ]
-    
-    func filterItems(for categoryPrefix: String, currentItems: [PatchLibraryItem]) -> [PatchLibraryItem] {
-        return currentItems.filter { item in
-            let name = item.project?.name ?? ""
-            return name.uppercased().contains(categoryPrefix.uppercased())
+    @State private var selectedCategory: String = "Todos"
+    @State private var searchText = "" // A busca agora usa a lógica original
+
+    // --- LÓGICA ORIGINAL DE FILTRAGEM ---
+    private var filteredItems: [PatchLibraryItem] {
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return store.items }
+        return store.items.filter { item in
+            if item.packageURL.lastPathComponent.localizedCaseInsensitiveContains(query) { return true }
+            guard let project = item.project else { return false }
+            if project.name.localizedCaseInsensitiveContains(query) || project.author.localizedCaseInsensitiveContains(query) { return true }
+            guard item.canInspectContents else { return false }
+            return project.allBundleIdentifiers.contains { $0.localizedCaseInsensitiveContains(query) }
+                || project.directories.contains { $0.relativePath.localizedCaseInsensitiveContains(query) }
+                || project.rules.contains { $0.relativePath.localizedCaseInsensitiveContains(query) || $0.replacementFilename.localizedCaseInsensitiveContains(query) }
         }
     }
-    
-    var filteredItems: [PatchLibraryItem] {
-        var items = store.allItems 
-        if !searchText.isEmpty {
-            items = items.filter { $0.project?.name.localizedCaseInsensitiveContains(searchText) ?? false }
-        }
-        if let categoryName = selectedCategory {
-            if let categoryData = categories.first(where: { $0.0 == categoryName }) {
-                return filterItems(for: categoryData.2, currentItems: items)
-            }
-        }
-        return items
-    }
-    
-        var body: some View {
+
+    var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
             
             VStack(spacing: 0) {
-                // O Group resolve o erro de compilação do .frame
                 Group {
                     switch activeTab {
                     case .dashboard:
                         dashboardContent
                     case .installed:
-                        genericTabContent(title: "INSTALLED", icon: "checkmark.circle.fill", description: "Patches instalados e ativos no sistema.")
+                        installedContent
                     case .search:
-                        dashboardContent
+                        dashboardContent // A dashboard já processa o filteredItems
                     case .settings:
-                        genericTabContent(title: "SETTINGS", icon: "gearshape.fill", description: "Configurações avançadas do injetor.")
+                        SettingsView() // Chama a View original de configurações
                     }
                 }
                 .frame(maxHeight: .infinity)
+                
+                // TAB BAR
+                HStack(spacing: 0) {
+                    tabButton(tab: .dashboard, icon: "house.fill", label: "Home")
+                    tabButton(tab: .installed, icon: "checkmark.circle.fill", label: "Installed")
+                    tabButton(tab: .search, icon: "magnifyingglass", label: "Search")
+                    tabButton(tab: .settings, icon: "gearshape.fill", label: "Settings")
+                }
+                .padding(.vertical, 12)
+                .background(Color.white.opacity(0.05))
+                .overlay(Rectangle().frame(height: 1).foregroundColor(Color.white.opacity(0.1)), alignment: .top)
+            }
+        }
+        .animation(.spring(), value: activeTab)
+    }
+
+    // --- ABA INSTALLED (Lógica Original) ---
+    private var installedContent: some View {
+        VStack {
+            Text("INSTALLED")
+                .font(.system(size: 18, weight: .bold, design: .monospaced))
+                .foregroundColor(.gray)
+                .padding(.top)
+            
+            ScrollView {
+                LazyVStack(spacing: 15) {
+                    // Mostra apenas o que está habilitado (Lógica de patches instalados)
+                    ForEach(store.allItems.filter { $0.project?.isEnabled == true }) { item in
+                        PatchCard(item: item, store: store)
+                    }
+                }
+                .padding()
+            }
+        }
+    }
+
+    // --- DASHBOARD COM A FILTRAGEM ORIGINAL ---
+    private var dashboardContent: some View {
+        VStack(spacing: 0) {
+            // Barra de busca integrada com a variável searchText
+            HStack {
+                Image(systemName: "magnifyingglass")
+                    .foregroundColor(.gray)
+                TextField("Search patches, authors, bundles...", text: $searchText)
+                    .foregroundColor(.white)
+            }
+            .padding()
+            .background(Color.white.opacity(0.1))
+            .cornerRadius(12)
+            .padding()
+
+            // Aqui usamos o filteredItems da lógica original para renderizar os cards
+            ScrollView {
+                LazyVStack(spacing: 15) {
+                    ForEach(filteredItems) { item in
+                        PatchCard(item: item, store: store)
+                    }
+                }
+                .padding()
+            }
+        }
+    }
+
+    // Função auxiliar para a Tab Bar
+    private func tabButton(tab: AppTab, icon: String, label: String) -> some View {
+        Button { activeTab = tab } label: {
+            VStack(spacing: 4) {
+                Image(systemName: icon)
+                    .foregroundColor(activeTab == tab ? .purple : .gray)
+                Text(label)
+                    .font(.caption2)
+                    .foregroundColor(activeTab == tab ? .purple : .gray)
+            }
+            .frame(maxWidth: .infinity)
+        }
+    }
+}
+
                 
                 // TAB BAR CUSTOMIZADA
                 HStack(spacing: 0) {
