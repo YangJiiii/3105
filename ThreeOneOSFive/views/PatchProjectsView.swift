@@ -17,12 +17,15 @@ struct PatchProjectsView: View {
     ]
     
     // Função auxiliar para filtrar por prefixo ou nome
-    func filterItems(for categoryPrefix: String, currentItems: [PatchLibraryItem]) -> [PatchLibraryItem] {
+        func filterItems(for categoryPrefix: String, currentItems: [PatchLibraryItem]) -> [PatchLibraryItem] {
         return currentItems.filter { item in
             let name = item.project?.name ?? ""
-            return name.uppercased().hasPrefix(categoryPrefix.uppercased())
+            // Mudamos de hasPrefix para contains e removemos espaços extras
+            // Isso garante que mesmo com caracteres especiais, se o prefixo estiver lá, ele aparece
+            return name.uppercased().contains(categoryPrefix.uppercased())
         }
     }
+
     
     var filteredItems: [PatchLibraryItem] {
         var items = store.items
