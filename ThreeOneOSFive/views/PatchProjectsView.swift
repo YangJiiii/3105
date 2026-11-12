@@ -15,10 +15,8 @@ struct PatchProjectsView: View {
     @EnvironmentObject private var store: PatchProjectStore
     
     @State private var activeTab: AppTab = .dashboard
-    @State private var selectedCategory: String = "Todos"
-    @State private var searchText = "" // A busca agora usa a lógica original
+    @State private var searchText = ""
 
-    // --- LÓGICA ORIGINAL DE FILTRAGEM ---
     private var filteredItems: [PatchLibraryItem] {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !query.isEmpty else { return store.items }
@@ -45,12 +43,79 @@ struct PatchProjectsView: View {
                     case .installed:
                         installedContent
                     case .search:
-                        dashboardContent // A dashboard já processa o filteredItems
+                        dashboardContent
                     case .settings:
-                        SettingsView() // Chama a View original de configurações
+                        SettingsView()
                     }
                 }
                 .frame(maxHeight: .infinity)
+                
+                HStack(spacing: 0) {
+                    tabButton(tab: .dashboard, icon: "house.fill", label: "Home")
+                    tabButton(tab: .installed, icon: "checkmark.circle.fill", label: "Installed")
+                    tabButton(tab: .search, icon: "magnifyingglass", label: "Search")
+                    tabButton(tab: .settings, icon: "gearshape.fill", label: "Settings")
+                }
+                .padding(.vertical, 12)
+                .background(Color.white.opacity(0.05))
+                .overlay(Rectangle().frame(height: 1).foregroundColor(Color.white.opacity(0.1)), alignment: .top)
+            }
+        }
+        .animation(.spring(), value: activeTab)
+        .patchStorePresentation(store)
+    }
+
+    private var dashboardContent: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Image(systemName: "magnifyingglass").foregroundColor(.gray)
+                TextField("Search patches...", text: $searchText).foregroundColor(.white)
+            }
+            .padding().background(Color.white.opacity(0.1)).cornerRadius(12).padding()
+
+            ScrollView {
+                LazyVStack(spacing: 15) {
+                    ForEach(filteredItems) { item in
+                        if item.isLocked {
+                            Button { store.requestUnlock(for: item) } label: {
+                                PatchCard(item: item, store: store)
+                            }.buttonStyle(.plain)
+                        } else {
+                            NavigationLink {
+                                PatchProjectDetailView(store: store, projectID: item.id)
+                            } label: {
+                                PatchCard(item: item, store: store)
+                            }
+                        }
+                    }
+                }.padding()
+            }
+        }
+    }
+
+    private var installedContent: some View {
+        VStack {
+            Text("INSTALLED").font(.system(size: 18, weight: .bold, design: .monospaced)).foregroundColor(.gray).padding(.top)
+            ScrollView {
+                LazyVStack(spacing: 15) {
+                    ForEach(store.allItems.filter { $0.project?.isEnabled == true }) { item in
+                        PatchCard(item: item, store: store)
+                    }
+                }.padding()
+            }
+        }
+    }
+
+    private func tabButton(tab: AppTab, icon: String, label: String) -> some View {
+        Button { activeTab = tab } label: {
+            VStack(spacing: 4) {
+                Image(systemName: icon).foregroundColor(activeTab == tab ? .purple : .gray)
+                Text(label).font(.caption2).foregroundColor(activeTab == tab ? .purple : .gray)
+            }.frame(maxWidth: .infinity)
+        }
+    }
+}
+
                 
                 // TAB BAR
                 HStack(spacing: 0) {
