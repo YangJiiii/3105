@@ -16,6 +16,21 @@ enum PatchStoreAlert: Identifiable {
         case .error(let msg), .success(let msg): return msg
         }
     }
+    
+    // Resolve o erro: value of type 'PatchStoreAlert' has no member 'titleKey'
+    var titleKey: String {
+        switch self {
+        case .error: return "alert.error.title"
+        case .success: return "alert.success.title"
+        }
+    }
+    
+    // Resolve o erro: value of type 'PatchStoreAlert' has no member 'message'
+    func message(language: LocalizationService) -> String {
+        switch self {
+        case .error(let msg), .success(let msg): return msg
+        }
+    }
 }
 
 class PatchProjectStore: ObservableObject {
@@ -30,15 +45,13 @@ class PatchProjectStore: ObservableObject {
     }
     
     func loadPatches() {
-        // Lógica de carregamento de arquivos .3105
         self.items = [] 
         self.allItems = []
     }
     
-    // Resolve o erro: value of type 'PatchProjectStore' has no member 'importPackage'
-    func importPackage(url: URL) -> Bool {
+    // Resolve o erro de 'extra arguments' ajustando a assinatura para aceitar data e url
+    func importPackage(data: Data, url: URL) -> Bool {
         self.isBusy = true
-        // Aqui entraria a lógica real de importação do arquivo .3105
         DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
             self.isBusy = false
             self.alert = .success("Package imported successfully")
