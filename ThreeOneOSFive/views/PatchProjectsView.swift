@@ -4,9 +4,9 @@ import UniformTypeIdentifiers
 // Enum para controlar qual aba está ativa
 enum AppTab {
     case dashboard
-    case workspace
-    case password
-    case export
+    case installed
+    case search
+    case settings
 }
 
 struct PatchProjectsView: View {
@@ -50,26 +50,25 @@ struct PatchProjectsView: View {
             
             VStack(spacing: 0) {
                 // CONTEÚDO DINÂMICO BASEADO NA ABA
-                VStack(spacing: 25) {
                     switch activeTab {
-                    case .dashboard:
-                        dashboardContent
-                    case .workspace:
-                        genericTabContent(title: "WORKSPACE", icon: "square.stack.3d.up", description: "Gerenciamento de arquivos e diretórios.")
-                    case .password:
-                        genericTabContent(title: "PASSWORD", icon: "lock.shield", description: "Configurações de segurança e chaves.")
-                    case .export:
-                        genericTabContent(title: "EXPORT", icon: "square.and.arrow.up", description: "Exportar configurações e backups.")
-                    }
-                }
+                        case .dashboard:
+                            dashboardContent
+                        case .installed:
+                            genericTabContent(title: "INSTALLED", icon: "checkmark.circle.fill", description: "Patches instalados e ativos no sistema.")
+                        case .search:
+                            dashboardContent
+                        case .settings:
+                            genericTabContent(title: "SETTINGS", icon: "gearshape.fill", description: "Configurações avançadas do injetor.")
+                        }
+                    
                 .frame(maxHeight: .infinity)
                 
                 // TAB BAR CUSTOMIZADA (ESTÉTICA GAMER)
                 HStack(spacing: 0) {
                     tabButton(tab: .dashboard, icon: "house.fill", label: "Home")
-                    tabButton(tab: .workspace, icon: "folder.fill", label: "Work")
-                    tabButton(tab: .password, icon: "key.fill", label: "Key")
-                    tabButton(tab: .export, icon: "arrow.up.doc.fill", label: "Export")
+                    tabButton(tab: .installed, icon: "checkmark.circle.fill", label: "Installed")
+                    tabButton(tab: .search, icon: "magnifyingglass", label: "Search")
+                    tabButton(tab: .settings, icon: "gearshape.fill", label: "Settings")
                 }
                 .padding(.vertical, 12)
                 .background(Color.white.opacity(0.05))
