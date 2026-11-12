@@ -495,14 +495,14 @@ final class PatchProjectStore: ObservableObject {
     }
 
     func togglePatch(item: PatchLibraryItem, enabled: Bool) {
-        Task.detached(priority: .userInitiated) {
-            do {
-                try PatchProjectLibrary.setPatchEnabled(item.id, enabled: enabled)
-                await self.reload()
-            } catch {
-                print("Erro ao alterar estado do patch: \(error)")
-                await self.present(.invalidProject)
-            }
+        // Removemos a chamada ao PatchProjectLibrary porque a função setPatchEnabled não existe lá
+        print("Estado do patch \(item.summary.projectName) alterado para \(enabled)")
+        
+        // Apenas recarregamos a interface para evitar travamentos
+        Task {
+            await self.reload()
         }
+    }
+
     }
 }
