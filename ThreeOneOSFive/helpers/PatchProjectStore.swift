@@ -76,10 +76,11 @@ final class PatchProjectStore: ObservableObject {
         }
     }
 
-    func filterProjects(for section: AppSection) {
+        func filterProjects(for section: AppSection) {
         switch section {
         case .home:
-            items = allItems.filter { $0.project?.name.localizedCaseInsensitiveContains("HS") ?? false }
+            // REMOVIDO O FILTRO "HS": Agora mostra todos os patches encontrados no bundle
+            items = allItems
         case .new:
             items = allItems.filter { $0.project?.name.localizedCaseInsensitiveContains("PAINEL") ?? false }
         case .sources:
@@ -95,6 +96,7 @@ final class PatchProjectStore: ObservableObject {
             items = allItems
         }
     }
+
 
     func reload() {
         let loadedItems = PatchProjectLibrary.load()
