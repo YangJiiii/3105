@@ -44,26 +44,27 @@ struct PatchProjectsView: View {
         return items
     }
     
-    var body: some View {
+        var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
             
             VStack(spacing: 0) {
-                // CONTEÚDO DINÂMICO BASEADO NA ABA
+                // O Group resolve o erro de compilação do .frame
+                Group {
                     switch activeTab {
-                        case .dashboard:
-                            dashboardContent
-                        case .installed:
-                            genericTabContent(title: "INSTALLED", icon: "checkmark.circle.fill", description: "Patches instalados e ativos no sistema.")
-                        case .search:
-                            dashboardContent
-                        case .settings:
-                            genericTabContent(title: "SETTINGS", icon: "gearshape.fill", description: "Configurações avançadas do injetor.")
-                        }
-                    
+                    case .dashboard:
+                        dashboardContent
+                    case .installed:
+                        genericTabContent(title: "INSTALLED", icon: "checkmark.circle.fill", description: "Patches instalados e ativos no sistema.")
+                    case .search:
+                        dashboardContent
+                    case .settings:
+                        genericTabContent(title: "SETTINGS", icon: "gearshape.fill", description: "Configurações avançadas do injetor.")
+                    }
+                }
                 .frame(maxHeight: .infinity)
                 
-                // TAB BAR CUSTOMIZADA (ESTÉTICA GAMER)
+                // TAB BAR CUSTOMIZADA
                 HStack(spacing: 0) {
                     tabButton(tab: .dashboard, icon: "house.fill", label: "Home")
                     tabButton(tab: .installed, icon: "checkmark.circle.fill", label: "Installed")
@@ -83,6 +84,7 @@ struct PatchProjectsView: View {
         .animation(.spring(), value: activeTab)
         .animation(.spring(), value: selectedCategory)
     }
+
     
     // MARK: - Componentes de Tela
     
