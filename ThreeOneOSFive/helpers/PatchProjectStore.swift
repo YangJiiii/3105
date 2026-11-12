@@ -1,508 +1,433 @@
 import Foundation
 
-struct PatchStoreAlert: Identifiable {
-    let id = UUID()
-    let titleKey: String
-    let messageKey: String
-    var messageArgument: String?
+struct PatchLibraryItem: Identifiable {
+let summary: PatchPackageSummary
+var project: PatchProject?
+var contentKey: Data?
+var packageURL: URL
+let isAuthorCopy: Bool
+let origin: PatchPackageOrigin?
 
-    init(titleKey: String, messageKey: String, messageArgument: String? = nil) {
-        self.titleKey = titleKey
-        self.messageKey = messageKey
-        self.messageArgument = messageArgument
-    }
-
-    func message(language: AppLanguage) -> String {
-        if let messageArgument {
-            return language.text(messageKey, messageArgument)
-        }
-        return language.text(messageKey)
-    }
+var id: UUID { summary.packageID }
+var isLocked: Bool { project == nil }
+var canInspectContents: Bool {
+guard let project else { return false }
+return PatchProjectAccessPolicy.canInspectContents(
+project: project,
+isAuthorCopy: isAuthorCopy
+)
+}
+var workspaceURL: URL? {
+guard canInspectContents else { return nil }
+return PatchWorkspaceService.workspaceURL(projectID: id)
+}
 }
 
-@MainActor
-final class PatchProjectStore: ObservableObject {
-    @Published private(set) var items: [PatchLibraryItem] = []
-    @Published private(set) var allItems: [PatchLibraryItem] = []
-    @Published var currentSection: AppSection = .home 
-    @Published private(set) var isBusy = false
-    @Published var passwordRequest: PatchPasswordRequest?
-    @Published var alert: PatchStoreAlert?
-    @Published var unlockErrorKey: String?
+struct PatchPasswordRequest: Identifiable {
+let summary: PatchPackageSummary
+let origin: PatchPackageOrigin?
+var id: UUID { summary.packageID }
 
-    private struct PendingUnlock {
-        let data: Data
-        let summary: PatchPackageSummary
-        let existingURL: URL?
-        let origin: PatchPackageOrigin?
-    }
+init(summary: PatchPackageSummary, origin: PatchPackageOrigin? = nil) {
+self.summary = summary
+self.origin = origin
+}
+}
 
-    private var pendingUnlock: PendingUnlock?
+enum PatchProjectLibrary {
+private static let authorCopiesDirectoryName = ".AuthorCopies"
+private static let originsDirectoryName = ".Origins"
 
-    init() {
-        isBusy = true
-        Task.detached(priority: .userInitiated) { [weak self] in
-            let loadedItems = PatchProjectLibrary.load()
-            var bundleItems: [PatchLibraryItem] = []
-            
-            let fileManager = FileManager.default
-            let bundlePath = Bundle.main.bundlePath
-            
-            if let enumerator = fileManager.enumerator(atPath: bundlePath) {
-                while let filePath = enumerator.nextObject() as? String {
-                    if filePath.hasSuffix(".3105") {
-                        let fullPath = (bundlePath as NSString).appendingPathComponent(filePath)
-                        let url = URL(fileURLWithPath: fullPath)
-                        do {
-                            let data = try Data(contentsOf: url)
-                            let summary = try PatchPackageCodec.inspect(data)
-                            let item = PatchLibraryItem(
-                                summary: summary,
-                                contentKey: nil, 
-                                packageURL: url,
-                                isAuthorCopy: false,
-                                origin: nil
-                            )
-                            bundleItems.append(item)
-                        } catch {
-                            print("Erro ao ler arquivo: \(url.lastPathComponent)")
-                        }
-                    }
-                }
-            }
-            
-            let finalItems = loadedItems + bundleItems
-            await self?.finishInitialLoad(finalItems)
-        }
-    }
+static func packageRootURL(fileManager: FileManager =.default) throws -> URL {
+let base = try fileManager.url(
+for:.applicationSupportDirectory,
+in:.userDomainMask,
+appropriateFor: nil,
+create: true
+)
+let root = base.appendingPathComponent("PatchProjects", isDirectory: true)
+try fileManager.createDirectory(at: root, withIntermediateDirectories: true)
+return root
+}
 
-    func filterProjects(for section: AppSection) {
-        switch section {
-        case .home:
-            items = allItems.filter { $0.project?.name.localizedCaseInsensitiveContains("HS") ?? false }
-        case .new:
-            items = allItems.filter { $0.project?.name.localizedCaseInsensitiveContains("PAINEL") ?? false }
-        case .sources:
-            items = allItems.filter { $0.project?.name.localizedCaseInsensitiveContains("HOLOGRAMAS") ?? false }
-        case .installed:
-            items = allItems.filter { item in
-                let name = item.project?.name ?? ""
-                return !name.localizedCaseInsensitiveContains("HS") && 
-                       !name.localizedCaseInsensitiveContains("PAINEL") && 
-                       !name.localizedCaseInsensitiveContains("HOLOGRAMAS")
-            }
-        default:
-            items = allItems
-        }
-    }
+static func backupRootURL(fileManager: FileManager =.default) throws -> URL {
+let root = try packageRootURL(fileManager: fileManager)
+.appendingPathComponent("Backups", isDirectory: true)
+try fileManager.createDirectory(at: root, withIntermediateDirectories: true)
+return root
+}
 
-    func reload() {
-        let loadedItems = PatchProjectLibrary.load()
-        allItems = loadedItems
-        filterProjects(for: currentSection)
-    }
+static func load(fileManager: FileManager =.default) -> {
+guard let root = try? packageRootURL(fileManager: fileManager),
+let urls = try? fileManager.contentsOfDirectory(
+at: root,
+includingPropertiesForKeys: [.contentModificationDateKey,.fileSizeKey],
+options: [.skipsHiddenFiles,.skipsSubdirectoryDescendants]
+) else { return [] }
 
-    private func finishInitialLoad(_ loadedItems: [PatchLibraryItem]) {
-        allItems = loadedItems
-        filterProjects(for: currentSection)
-        isBusy = false
-    }
+var byID: [UUID: PatchLibraryItem] = [:]
+for url in urls where url.pathExtension.lowercased() == "3105" {
+do {
+let data = try readPackage(at: url)
+let summary = try PatchPackageCodec.inspect(data)
+let decoded: DecodedPatchPackage?
+if let contentKey = try PatchKeyStore.load(for: summary) {
+decoded = try PatchPackageCodec.decode(data, contentKey: contentKey)
+} else if summary.isPasswordProtected {
+decoded = nil
+} else {
+decoded = try PatchPackageCodec.decode(data, password: nil)
+}
+let isAuthorCopy = isAuthorCopy(
+packageID: summary.packageID,
+fileManager: fileManager
+)
+let item = PatchLibraryItem(
+summary: summary,
+project: decoded?.project,
+contentKey: decoded?.contentKey,
+packageURL: url,
+isAuthorCopy: isAuthorCopy,
+origin: loadOrigin(
+packageID: summary.packageID,
+fileManager: fileManager
+)
+)
+if summary.schemaVersion >= 2, let project = decoded?.project {
+if PatchProjectAccessPolicy.shouldMaterializeWorkspace(
+project: project,
+isAuthorCopy: isAuthorCopy
+) {
+do {
+_ = try PatchWorkspaceService.ensureWorkspace(for: project)
+} catch {
+log("patch: workspace unavailable for \(project.id.uuidString)")
+}
+} else {
+try? PatchWorkspaceService.deleteWorkspace(
+projectID: project.id,
+fileManager: fileManager
+)
+}
+}
+byID[summary.packageID] = item
+} catch {
+log("patch: skipped invalid local package \(url.lastPathComponent)")
+}
+}
+return byID.values.sorted {
+($0.project?.updatedAt??.distantPast) > ($1.project?.updatedAt??.distantPast)
+}
+}
 
-    func create(project: PatchProject, password: String?) {
-        runOperation(successMessageKey: "patch.created_message") {
-            let encoded = try PatchPackageCodec.encodeNew(project: project, password: password)
-            let summary = try PatchPackageCodec.inspect(encoded.data)
-            let workspace = try PatchWorkspaceService.createWorkspace(for: project)
-            var savedURL: URL?
-            do {
-                if summary.isPasswordProtected {
-                    try PatchKeyStore.store(encoded.contentKey, for: summary)
-                }
-                savedURL = try PatchProjectLibrary.save(
-                    data: encoded.data,
-                    projectName: project.name
-                )
-                try PatchProjectLibrary.markAsAuthorCopy(packageID: project.id)
-            } catch {
-                try? FileManager.default.removeItem(at: workspace)
-                if let savedURL {
-                    try? FileManager.default.removeItem(at: savedURL)
-                }
-                try? PatchKeyStore.delete(for: summary)
-                throw error
-            }
-        }
-    }
+static func readPackage(at url: URL) throws -> Data {
+let values = try url.resourceValues(forKeys: [.isDirectoryKey,.isRegularFileKey,.isSymbolicLinkKey])
+guard values.isDirectory!= true,
+values.isSymbolicLink!= true,
+values.isRegularFile == true else {
+throw PatchPackageError.invalidProject
+}
+return try Data(contentsOf: url, options:.mappedIfSafe)
+}
 
-    func update(project: PatchProject) {
-        guard let item = items.first(where: { $0.id == project.id }),
-              let contentKey = item.contentKey else {
-            present(.invalidProject)
-            return
-        }
-        runOperation(successMessageKey: "patch.updated_message") {
-            let original = try PatchProjectLibrary.readPackage(at: item.packageURL)
-            let updated = try PatchPackageCodec.update(
-                original,
-                project: project,
-                contentKey: contentKey,
-                schemaVersion: PatchPackageCodec.latestSchemaVersion
-            )
-            _ = try PatchProjectLibrary.save(
-                data: updated,
-                projectName: project.name,
-                existingURL: item.packageURL
-            )
-        }
-    }
+static func save(
+data: Data,
+projectName: String,
+existingURL: URL? = nil,
+fileManager: FileManager =.default
+) throws -> URL {
+let destination: URL
+if let existingURL {
+destination = existingURL
+} else {
+let root = try packageRootURL(fileManager: fileManager)
+let baseName = sanitizedFilename(projectName)
+var candidate = root.appendingPathComponent(baseName).appendingPathExtension("3105")
+var suffix = 2
+while fileManager.fileExists(atPath: candidate.path) {
+candidate = root.appendingPathComponent("\(baseName)-\(suffix)").appendingPathExtension("3105")
+suffix += 1
+}
+destination = candidate
+}
+try data.write(to: destination, options: [.atomic,.completeFileProtection])
+return destination
+}
 
-    func importPackage(at sourceURL: URL) {
-        guard !isBusy else { return }
-        isBusy = true
-        let hasAccess = sourceURL.startAccessingSecurityScopedResource()
-        Task.detached(priority: .userInitiated) { [weak self] in
-            defer {
-                if hasAccess { sourceURL.stopAccessingSecurityScopedResource() }
-            }
-            do {
-                let data = try PatchProjectLibrary.readPackage(at: sourceURL)
-                let summary = try PatchPackageCodec.inspect(data)
-                let existingURL = await self?.existingPackageURL(for: summary.packageID)
-                if let pending = try Self.persistImportedPackage(
-                    data: data,
-                    summary: summary,
-                    existingURL: existingURL
-                ) {
-                    await self?.requestPassword(pending: pending)
-                } else {
-                    await self?.finishOperation(successMessageKey: "patch.imported_message")
-                }
-            } catch let error as PatchPackageError {
-                await self?.failOperation(error)
-            } catch {
-                await self?.failOperation(.unsupportedFormat)
-            }
-        }
-    }
+static func markAsAuthorCopy(
+packageID: UUID,
+fileManager: FileManager =.default
+) throws {
+let root = try authorCopiesRootURL(fileManager: fileManager)
+try Data().write(
+to: root.appendingPathComponent(packageID.uuidString),
+options: [.atomic,.completeFileProtection]
+)
+}
 
-    @discardableResult
-    func importPackage(
-        data: Data,
-        password: String? = nil,
-        origin: PatchPackageOrigin? = nil
-    ) -> Bool {
-        guard !isBusy else { return false }
-        isBusy = true
-        Task.detached(priority: .userInitiated) { [weak self] in
-            do {
-                let summary = try PatchPackageCodec.inspect(data)
-                let existingURL = await self?.existingPackageURL(for: summary.packageID)
-                if let pending = try Self.persistImportedPackage(
-                    data: data,
-                    summary: summary,
-                    existingURL: existingURL,
-                    password: password,
-                    origin: origin
-                ) {
-                    await self?.requestPassword(pending: pending)
-                } else {
-                    await self?.finishOperation(successMessageKey: "patch.imported_message")
-                }
-            } catch let error as PatchPackageError {
-                await self?.failOperation(error)
-            } catch {
-                await self?.failOperation(.unsupportedFormat)
-            }
-        }
-        return true
-    }
+static func isAuthorCopy(
+packageID: UUID,
+fileManager: FileManager =.default
+) -> Bool {
+guard let root = try? authorCopiesRootURL(fileManager: fileManager) else {
+return false
+}
+return fileManager.fileExists(
+atPath: root.appendingPathComponent(packageID.uuidString).path
+)
+}
 
-    func presentImportError(_ error: PatchPackageError) {
-        present(error)
-    }
+static func overlappingTargetPath(
+in project: PatchProject,
+excludingPackageID: UUID,
+fileManager: FileManager =.default
+) -> String? {
+var occupied = Set<String>()
+for item in load(fileManager: fileManager) where item.id!= excludingPackageID {
+guard let other = item.project else { continue }
+for rule in other.rules {
+occupied.insert(rule.bundleID + "\0" + rule.relativePath)
+}
+}
+for rule in project.rules {
+let key = rule.bundleID + "\0" + rule.relativePath
+if occupied.contains(key) {
+return rule.bundleID + "/" + rule.relativePath
+}
+}
+return nil
+}
 
-    func importPackage(from source: PatchImportSource) {
-        switch source {
-        case .file(let url):
-            importPackage(at: url)
-        case .remote(let url):
-            importPackage(fromRemoteURL: url)
-        case .invalid:
-            present(.invalidImportLink)
-        }
-    }
+static func installImportedPackage(
+data: Data,
+decoded: DecodedPatchPackage,
+summary: PatchPackageSummary,
+existingURL: URL?,
+origin: PatchPackageOrigin? = nil,
+fileManager: FileManager =.default
+) throws {
+let authorCopy = isAuthorCopy(
+packageID: summary.packageID,
+fileManager: fileManager
+)
+if let occupiedPath = overlappingTargetPath(
+in: decoded.project,
+excludingPackageID: summary.packageID,
+fileManager: fileManager
+) {
+if decoded.project.isPrivate,!authorCopy {
+throw PatchPackageError.privateOperationFailed
+}
+throw PatchPackageError.targetOccupied(occupiedPath)
+}
+let previousData = try existingURL.map { try readPackage(at: $0) }
+let originURL = try originFileURL(
+packageID: summary.packageID,
+fileManager: fileManager
+)
+let previousOriginData = try? Data(contentsOf: originURL)
+var savedURL: URL?
+do {
+if let origin {
+try saveOrigin(origin, to: originURL)
+}
+savedURL = try save(
+data: data,
+projectName: decoded.project.name,
+existingURL: existingURL,
+fileManager: fileManager
+)
+if summary.schemaVersion >= 2 {
+if PatchProjectAccessPolicy.shouldMaterializeWorkspace(
+project: decoded.project,
+isAuthorCopy: authorCopy
+) {
+_ = try PatchWorkspaceService.replaceWorkspace(
+with: decoded.project,
+fileManager: fileManager
+)
+} else {
+try PatchWorkspaceService.deleteWorkspace(
+projectID: decoded.project.id,
+fileManager: fileManager
+)
+}
+} else {
+try? PatchWorkspaceService.deleteWorkspace(
+projectID: decoded.project.id,
+fileManager: fileManager
+)
+}
+} catch {
+if let previousData, let existingURL {
+try? previousData.write(
+to: existingURL,
+options: [.atomic,.completeFileProtection]
+)
+} else if let savedURL, fileManager.fileExists(atPath: savedURL.path) {
+try? fileManager.removeItem(at: savedURL)
+}
+if let previousOriginData {
+try? previousOriginData.write(
+to: originURL,
+options: [.atomic,.completeFileProtection]
+)
+} else if origin!= nil, fileManager.fileExists(atPath: originURL.path) {
+try? fileManager.removeItem(at: originURL)
+}
+throw error
+}
+}
 
-    private func importPackage(fromRemoteURL remoteURL: URL) {
-        guard !isBusy,
-              PatchImportRoute.validatedRemoteURL(remoteURL) != nil else {
-            if !isBusy { present(.invalidImportLink) }
-            return
-        }
-        isBusy = true
-        Task.detached(priority: .userInitiated) { [weak self] in
-            do {
-                let configuration = URLSessionConfiguration.ephemeral
-                configuration.timeoutIntervalForRequest = 60
-                configuration.timeoutIntervalForResource = 600
-                let session = URLSession(configuration: configuration)
-                defer { session.invalidateAndCancel() }
+static func delete(_ item: PatchLibraryItem, fileManager: FileManager =.default) throws {
+let backupRoot = try backupRootURL(fileManager: fileManager)
+guard PatchTransaction.latestReceipt(
+projectID: item.id,
+backupRoot: backupRoot,
+fileManager: fileManager
+) == nil else {
+throw PatchPackageError.activePatchCannotBeDeleted
+}
+if fileManager.fileExists(atPath: item.packageURL.path) {
+try fileManager.removeItem(at: item.packageURL)
+}
+try? PatchWorkspaceService.deleteWorkspace(projectID: item.id, fileManager: fileManager)
+try? PatchKeyStore.delete(for: item.summary)
+if let originURL = try? originFileURL(
+packageID: item.id,
+fileManager: fileManager
+), fileManager.fileExists(atPath: originURL.path) {
+try? fileManager.removeItem(at: originURL)
+}
+if let marker = try? authorCopyMarkerURL(
+packageID: item.id,
+fileManager: fileManager
+), fileManager.fileExists(atPath: marker.path) {
+try? fileManager.removeItem(at: marker)
+}
+}
 
-                let (temporaryURL, response) = try await session.download(from: remoteURL)
-                defer { try? FileManager.default.removeItem(at: temporaryURL) }
-                guard let response = response as? HTTPURLResponse,
-                      (200..<300).contains(response.statusCode),
-                      let finalURL = response.url,
-                      PatchImportRoute.validatedRemoteURL(finalURL) != nil else {
-                    throw PatchPackageError.remoteImportFailed
-                }
+static func synchronizeWorkspace(
+item: PatchLibraryItem,
+fileManager: FileManager =.default
+) throws -> PatchProject {
+guard item.summary.schemaVersion >= 2,
+item.canInspectContents,
+let baseProject = item.project,
+let contentKey = item.contentKey else {
+throw PatchPackageError.invalidProject
+}
+let workspace = try PatchWorkspaceService.ensureWorkspace(
+for: baseProject,
+fileManager: fileManager
+)
+let project = try PatchWorkspaceService.snapshot(
+baseProject: baseProject,
+workspaceURL: workspace,
+fileManager: fileManager
+)
+let original = try readPackage(at: item.packageURL)
+let updated = try PatchPackageCodec.update(
+original,
+project: project,
+contentKey: contentKey,
+schemaVersion: PatchPackageCodec.latestSchemaVersion
+)
+_ = try save(
+data: updated,
+projectName: project.name,
+existingURL: item.packageURL,
+fileManager: fileManager
+)
+return project
+}
 
-                let data = try PatchProjectLibrary.readPackage(at: temporaryURL)
-                let summary = try PatchPackageCodec.inspect(data)
-                let existingURL = await self?.existingPackageURL(for: summary.packageID)
-                if let pending = try Self.persistImportedPackage(
-                    data: data,
-                    summary: summary,
-                    existingURL: existingURL
-                ) {
-                    await self?.requestPassword(pending: pending)
-                } else {
-                    await self?.finishOperation(successMessageKey: "patch.imported_message")
-                }
-            } catch let error as PatchPackageError {
-                await self?.failOperation(error)
-            } catch {
-                await self?.failOperation(.remoteImportFailed)
-            }
-        }
-    }
+private static func sanitizedFilename(_ rawName: String) -> String {
+let allowed = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "-_ "))
+let scalars = rawName.unicodeScalars.map { allowed.contains($0)? Character(String($0)): "-" }
+let result = String(scalars)
+.trimmingCharacters(in:.whitespacesAndNewlines)
+.prefix(80)
+return result.isEmpty? "Patch": String(result)
+}
 
-    func requestUnlock(for item: PatchLibraryItem) {
-        guard item.isLocked, !isBusy else { return }
-        do {
-            let data = try PatchProjectLibrary.readPackage(at: item.packageURL)
-            pendingUnlock = PendingUnlock(
-                data: data,
-                summary: item.summary,
-                existingURL: item.packageURL,
-                origin: item.origin
-            )
-            passwordRequest = PatchPasswordRequest(
-                summary: item.summary,
-                origin: item.origin
-            )
-        } catch let error as PatchPackageError {
-            present(error)
-        } catch {
-            present(.unsupportedFormat)
-        }
-    }
+private static func authorCopiesRootURL(
+fileManager: FileManager
+) throws -> URL {
+let root = try packageRootURL(fileManager: fileManager)
+.appendingPathComponent(authorCopiesDirectoryName, isDirectory: true)
+try fileManager.createDirectory(at: root, withIntermediateDirectories: true)
+return root
+}
 
-    func unlock(password: String) {
-        guard let pending = pendingUnlock, !isBusy else { return }
-        isBusy = true
-        unlockErrorKey = nil
-        Task.detached(priority: .userInitiated) { [weak self] in
-            do {
-                let decoded = try PatchPackageCodec.decode(pending.data, password: password)
-                try PatchKeyStore.store(decoded.contentKey, for: pending.summary)
-                do {
-                    try PatchProjectLibrary.installImportedPackage(
-                        data: pending.data,
-                        decoded: decoded,
-                        summary: pending.summary,
-                        existingURL: pending.existingURL,
-                        origin: pending.origin
-                    )
-                } catch {
-                    try? PatchKeyStore.delete(for: pending.summary)
-                    throw error
-                }
-                await self?.clearPendingUnlock()
-                await self?.finishOperation(successMessageKey: "patch.unlocked_message")
-            } catch let error as PatchPackageError {
-                await self?.failUnlock(error)
-            } catch {
-                await self?.failUnlock(.invalidPasswordOrCorruptedPackage)
-            }
-        }
-    }
+private static func authorCopyMarkerURL(
+packageID: UUID,
+fileManager: FileManager
+) throws -> URL {
+try authorCopiesRootURL(fileManager: fileManager)
+.appendingPathComponent(packageID.uuidString)
+}
 
-    func cancelUnlock() {
-        clearPendingUnlock()
-        isBusy = false
-    }
+private static func originsRootURL(fileManager: FileManager) throws -> URL {
+let root = try packageRootURL(fileManager: fileManager)
+.appendingPathComponent(originsDirectoryName, isDirectory: true)
+try fileManager.createDirectory(at: root, withIntermediateDirectories: true)
+return root
+}
 
-    func clearUnlockError() {
-        unlockErrorKey = nil
-    }
+private static func originFileURL(
+packageID: UUID,
+fileManager: FileManager
+) throws -> URL {
+try originsRootURL(fileManager: fileManager)
+.appendingPathComponent(packageID.uuidString)
+.appendingPathExtension("plist")
+}
 
-    func delete(_ item: PatchLibraryItem) {
-        do {
-            try PatchProjectLibrary.delete(item)
-            reload()
-        } catch let error as PatchPackageError {
-            present(error)
-        } catch {
-            present(.invalidProject)
-        }
-    }
+private static func loadOrigin(
+packageID: UUID,
+fileManager: FileManager
+) -> PatchPackageOrigin? {
+guard let url = try? originFileURL(
+packageID: packageID,
+fileManager: fileManager
+), let data = try? Data(contentsOf: url) else {
+return nil
+}
+return try? PropertyListDecoder().decode(PatchPackageOrigin.self, from: data)
+}
 
-    func synchronizeWorkspace(projectID: UUID, reportsSuccess: Bool = false) {
-        guard let item = items.first(where: { $0.id == projectID }),
-              item.summary.schemaVersion >= 2,
-              !isBusy else { return }
-        isBusy = true
-        Task.detached(priority: .userInitiated) { [weak self] in
-            do {
-                _ = try PatchProjectLibrary.synchronizeWorkspace(item: item)
-                await self?.finishWorkspaceSynchronization(reportsSuccess: reportsSuccess)
-            } catch let error as PatchPackageError {
-                await self?.failOperation(error)
-            } catch {
-                await self?.failOperation(.invalidProject)
-            }
-        }
-    }
+private static func saveOrigin(
+_ origin: PatchPackageOrigin,
+to url: URL
+) throws {
+let encoder = PropertyListEncoder()
+encoder.outputFormat =.binary
+try encoder.encode(origin).write(
+to: url,
+options: [.atomic,.completeFileProtection]
+)
+}
 
-    private func finishWorkspaceSynchronization(reportsSuccess: Bool) {
-        reload()
-        isBusy = false
-        if reportsSuccess {
-            alert = PatchStoreAlert(
-                titleKey: "common.done",
-                messageKey: "patch.workspace_synced_message"
-            )
-        }
-    }
+static func setPatchEnabled(_ packageID: UUID, enabled: Bool) throws {
+let defaults = UserDefaults.standard
+defaults.set(enabled, forKey: "patch_enabled_\(packageID.uuidString)")
+}
 
-    private func runOperation(
-        successMessageKey: String,
-        operation: @escaping () throws -> Void
-    ) {
-        guard !isBusy else { return }
-        isBusy = true
-        Task.detached(priority: .userInitiated) { [weak self] in
-            do {
-                try operation()
-                await self?.finishOperation(successMessageKey: successMessageKey)
-            } catch let error as PatchPackageError {
-                await self?.failOperation(error)
-            } catch {
-                await self?.failOperation(.invalidProject)
-            }
-        }
-    }
-
-    private func requestPassword(pending: PendingUnlock) {
-        pendingUnlock = pending
-        passwordRequest = PatchPasswordRequest(
-            summary: pending.summary,
-            origin: pending.origin
-        )
-        isBusy = false
-    }
-
-    private func existingPackageURL(for packageID: UUID) -> URL? {
-        items.first(where: { $0.id == packageID })?.packageURL
-    }
-
-    private nonisolated static func persistImportedPackage(
-        data: Data,
-        summary: PatchPackageSummary,
-        existingURL: URL?,
-        password: String? = nil,
-        origin: PatchPackageOrigin? = nil
-    ) throws -> PendingUnlock? {
-        if let key = try PatchKeyStore.load(for: summary) {
-            let decoded = try PatchPackageCodec.decode(data, contentKey: key)
-            try PatchProjectLibrary.installImportedPackage(
-                data: data,
-                decoded: decoded,
-                summary: summary,
-                existingURL: existingURL,
-                origin: origin
-            )
-            return nil
-        }
-        if summary.isPasswordProtected {
-            guard let password else {
-                return PendingUnlock(
-                    data: data,
-                    summary: summary,
-                    existingURL: existingURL,
-                    origin: origin
-                )
-            }
-            let decoded = try PatchPackageCodec.decode(data, password: password)
-            try PatchKeyStore.store(decoded.contentKey, for: summary)
-            do {
-                try PatchProjectLibrary.installImportedPackage(
-                    data: data,
-                    decoded: decoded,
-                    summary: summary,
-                    existingURL: existingURL,
-                    origin: origin
-                )
-            } catch {
-                try? PatchKeyStore.delete(for: summary)
-                throw error
-            }
-            return nil
-        }
-        let decoded = try PatchPackageCodec.decode(data, password: nil)
-        try PatchProjectLibrary.installImportedPackage(
-            data: data,
-            decoded: decoded,
-            summary: summary,
-            existingURL: existingURL,
-            origin: origin
-        )
-        return nil
-    }
-
-    private func clearPendingUnlock() {
-        pendingUnlock = nil
-        passwordRequest = nil
-        unlockErrorKey = nil
-    }
-
-    private func finishOperation(successMessageKey: String) {
-        reload()
-        isBusy = false
-        alert = PatchStoreAlert(titleKey: "common.done", messageKey: successMessageKey)
-    }
-
-    private func failOperation(_ error: PatchPackageError) {
-        isBusy = false
-        present(error)
-    }
-
-    private func failUnlock(_ error: PatchPackageError) {
-        isBusy = false
-        if case .invalidPasswordOrCorruptedPackage = error {
-            unlockErrorKey = "patch.error.wrong_password"
-        } else {
-            unlockErrorKey = error.localizationKey
-        }
-    }
-
-    private func present(_ error: PatchPackageError) {
-        alert = PatchStoreAlert(
-            titleKey: "common.failed",
-            messageKey: error.localizationKey,
-            messageArgument: error.localizationArgument
-        )
-    }
-
-      func togglePatch(item: PatchLibraryItem, enabled: Bool) {
-        Task.detached(priority: .userInitiated) {
-            do {
-                try PatchProjectLibrary.setPatchEnabled(item.id, enabled: enabled)
-                await self.reload()
-            } catch {
-                print("Erro ao alterar estado do patch: \(error)")
-                await self.present(.invalidProject)
-            }
-        }
-    }
-
+static func isPatchEnabled(_ packageID: UUID) -> Bool {
+return UserDefaults.standard.bool(forKey: "patch_enabled_\(packageID.uuidString)")
+}
+}
+``````swift
+func togglePatch(item: PatchLibraryItem, enabled: Bool) {
+Task.detached(priority:.userInitiated) {
+do {
+try PatchProjectLibrary.setPatchEnabled(item.id, enabled: enabled)
+await self.reload()
+} catch {
+print("Erro ao alterar estado do patch: \(error)")
+await self.present(.invalidProject)
+}
+}
+}
+}
