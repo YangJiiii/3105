@@ -20,14 +20,12 @@ struct PatchProjectsView: View {
     func filterItems(for categoryPrefix: String, currentItems: [PatchLibraryItem]) -> [PatchLibraryItem] {
         return currentItems.filter { item in
             let name = item.project?.name ?? ""
-            // Usamos contains para evitar erros de prefixo/espaços
             return name.uppercased().contains(categoryPrefix.uppercased())
         }
     }
     
     var filteredItems: [PatchLibraryItem] {
-        // AQUI ESTÁ A CHAVE: Agora consumimos store.allItems para garantir que 
-        // a aba "Installed" (que é onde os patches ficam) mostre tudo.
+        // Usamos allItems para garantir que a busca encontre tudo, independente da aba do Store
         var items = store.allItems 
         
         if !searchText.isEmpty {
@@ -48,7 +46,7 @@ struct PatchProjectsView: View {
             Color.black.ignoresSafeArea()
             
             VStack(spacing: 25) {
-                // CABEÇALHO - Sempre visível na Dashboard
+                // CABEÇALHO - Apenas na Dashboard
                 if selectedCategory == nil {
                     VStack(spacing: 8) {
                         Text("DASHBOARD")
@@ -65,7 +63,7 @@ struct PatchProjectsView: View {
                                 .font(.system(size: 24, weight: .bold))
                                 .foregroundColor(.white)
                                 
-                                Text("Toque em uma opção para abrir os patches.")
+                                Text("Toque em uma opção para pesquisar patches.")
                                 .font(.system(size: 14))
                                 .foregroundColor(.gray)
                             }
@@ -83,7 +81,7 @@ struct PatchProjectsView: View {
                     .padding(.top)
                 }
                 
-                // BARRA DE BUSCA - Visível em ambos os estados
+                // BARRA DE BUSCA - Agora central para a aba Search
                 HStack {
                     Image(systemName: "magnifyingglass")
                         .foregroundColor(.gray)
@@ -96,15 +94,18 @@ struct PatchProjectsView: View {
                 .padding(.horizontal)
                 
                 if let category = selectedCategory {
-                    // ESTA É A "ABA INSTALLED" (Visualmente)
+                    // ESTA É A "ABA SEARCH" (Substituindo a Installed)
                     VStack {
                         HStack {
-                            Button(action: { selectedCategory = nil }) {
+                            Button(action: { 
+                                selectedCategory = nil 
+                                searchText = "" // Limpa a busca ao voltar
+                            }) {
                                 Image(systemName: "chevron.left")
                                     .foregroundColor(.white)
                                     .padding()
                             }
-                            Text("INSTALLED: \(category)")
+                            Text("SEARCH: \(category)")
                                 .font(.title2)
                                 .bold()
                                 .foregroundColor(.white)
@@ -113,10 +114,10 @@ struct PatchProjectsView: View {
                         
                         if filteredItems.isEmpty {
                             VStack(spacing: 20) {
-                                Image(systemName: "folder.badge.questionmark")
+                                Image(systemName: "magnifyingglass.circle")
                                     .font(.system(size: 50))
                                     .foregroundColor(.gray)
-                                Text("Nenhum patch encontrado nesta categoria")
+                                Text("Nenhum resultado encontrado")
                                     .foregroundColor(.gray)
                             }
                             .frame(maxHeight: .infinity)
@@ -152,7 +153,6 @@ struct PatchProjectsView: View {
                                             .font(.headline)
                                             .foregroundColor(.white)
                                         
-                                        // Contador agora olha para allItems (Aba Installed)
                                         Text("\(filterItems(for: category.2, currentItems: store.allItems).count) patches")
                                             .font(.caption)
                                             .foregroundColor(.gray)
