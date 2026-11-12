@@ -17,25 +17,24 @@ struct PatchProjectsView: View {
     ]
     
     // Função auxiliar para filtrar por prefixo ou nome
-        func filterItems(for categoryPrefix: String, currentItems: [PatchLibraryItem]) -> [PatchLibraryItem] {
+    func filterItems(for categoryPrefix: String, currentItems: [PatchLibraryItem]) -> [PatchLibraryItem] {
         return currentItems.filter { item in
             let name = item.project?.name ?? ""
-            // Mudamos de hasPrefix para contains e removemos espaços extras
-            // Isso garante que mesmo com caracteres especiais, se o prefixo estiver lá, ele aparece
+            // Usamos contains para evitar erros de prefixo/espaços
             return name.uppercased().contains(categoryPrefix.uppercased())
         }
     }
-
     
     var filteredItems: [PatchLibraryItem] {
-        var items = store.items
+        // AQUI ESTÁ A CHAVE: Agora consumimos store.allItems para garantir que 
+        // a aba "Installed" (que é onde os patches ficam) mostre tudo.
+        var items = store.allItems 
         
         if !searchText.isEmpty {
             items = items.filter { $0.project?.name.localizedCaseInsensitiveContains(searchText) ?? false }
         }
         
         if let categoryName = selectedCategory {
-            // Busca o prefixo correspondente ao nome da categoria selecionada
             if let categoryData = categories.first(where: { $0.0 == categoryName }) {
                 return filterItems(for: categoryData.2, currentItems: items)
             }
@@ -49,38 +48,42 @@ struct PatchProjectsView: View {
             Color.black.ignoresSafeArea()
             
             VStack(spacing: 25) {
-                VStack(spacing: 8) {
-                    Text("DASHBOARD")
-                        .font(.system(size: 18, weight: .bold, design: .monospaced))
-                        .foregroundColor(.gray)
-                    
-                    HStack {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("ESCOLHA UMA CATEGORIA")
+                // CABEÇALHO - Sempre visível na Dashboard
+                if selectedCategory == nil {
+                    VStack(spacing: 8) {
+                        Text("DASHBOARD")
+                            .font(.system(size: 18, weight: .bold, design: .monospaced))
+                            .foregroundColor(.gray)
+                        
+                        HStack {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("ESCOLHA UMA CATEGORIA")
                                 .font(.system(size: 12, weight: .bold))
                                 .foregroundColor(.purple)
-                            
-                            Text("Patches disponíveis para FF")
+                                
+                                Text("Patches disponíveis para FF")
                                 .font(.system(size: 24, weight: .bold))
                                 .foregroundColor(.white)
-                            
-                            Text("Toque em uma opção para abrir os patches.")
+                                
+                                Text("Toque em uma opção para abrir os patches.")
                                 .font(.system(size: 14))
                                 .foregroundColor(.gray)
-                        }
-                        Spacer()
-                        
-                        Button(action: {}) {
-                            Image(systemName: "ellipsis.circle.fill")
-                                .resizable()
-                                .frame(width: 30, height: 30)
-                                .foregroundColor(.white)
+                            }
+                            Spacer()
+                            
+                            Button(action: {}) {
+                                Image(systemName: "ellipsis.circle.fill")
+                                    .resizable()
+                                    .frame(width: 30, height: 30)
+                                    .foregroundColor(.white)
+                            }
                         }
                     }
+                    .padding(.horizontal)
+                    .padding(.top)
                 }
-                .padding(.horizontal)
-                .padding(.top)
                 
+                // BARRA DE BUSCA - Visível em ambos os estados
                 HStack {
                     Image(systemName: "magnifyingglass")
                         .foregroundColor(.gray)
@@ -93,6 +96,7 @@ struct PatchProjectsView: View {
                 .padding(.horizontal)
                 
                 if let category = selectedCategory {
+                    // ESTA É A "ABA INSTALLED" (Visualmente)
                     VStack {
                         HStack {
                             Button(action: { selectedCategory = nil }) {
@@ -100,7 +104,7 @@ struct PatchProjectsView: View {
                                     .foregroundColor(.white)
                                     .padding()
                             }
-                            Text(category)
+                            Text("INSTALLED: \(category)")
                                 .font(.title2)
                                 .bold()
                                 .foregroundColor(.white)
@@ -129,6 +133,7 @@ struct PatchProjectsView: View {
                     }
                     .transition(.move(edge: .trailing))
                 } else {
+                    // TELA DE INÍCIO (Dashboard)
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 15) {
                         ForEach(categories, id: \.0) { category in
                             Button(action: { selectedCategory = category.0 }) {
@@ -147,8 +152,8 @@ struct PatchProjectsView: View {
                                             .font(.headline)
                                             .foregroundColor(.white)
                                         
-                                        // Contador atualizado para contar por prefixo
-                                        Text("\(filterItems(for: category.2, currentItems: store.items).count) patches")
+                                        // Contador agora olha para allItems (Aba Installed)
+                                        Text("\(filterItems(for: category.2, currentItems: store.allItems).count) patches")
                                             .font(.caption)
                                             .foregroundColor(.gray)
                                     }
@@ -199,7 +204,6 @@ struct PatchCard: View {
                 }
                 
                 VStack(alignment: .leading, spacing: 2) {
-                    // Remove o prefixo do nome para ficar bonito na tela
                     Text(cleanName(item.project?.name))
                         .font(.headline)
                         .foregroundColor(.white)
@@ -228,7 +232,7 @@ struct PatchCard: View {
                         Toggle("", isOn: Binding(
                             get: { item.project?.isEnabled ?? false },
                             set: { newValue in
-                                store.togglePatch(item: item,enabled: newValue)
+                                store.togglePatch(item: item, enabled: newValue)
                             }
                         ))
                         .toggleStyle(SwitchToggleStyle(tint: .purple))
@@ -246,7 +250,6 @@ struct PatchCard: View {
         )
     }
     
-    // Função para remover o prefixo (AVT_, CCH_, etc) da exibição do nome
     func cleanName(_ name: String?) -> String {
         guard let name = name else { return "Patch Desconhecido" }
         if let underscoreIndex = name.firstIndex(of: "_") {
