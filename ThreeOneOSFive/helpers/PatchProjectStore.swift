@@ -11,9 +11,9 @@ enum PatchStoreAlert: Identifiable {
     case error(String)
     case success(String)
     
-    var id: String {
+    var id: UUID {
         switch self {
-        case .error(let msg), .success(let msg): return msg
+        case .error(let msg), .success(let msg): return UUID()
         }
     }
     
