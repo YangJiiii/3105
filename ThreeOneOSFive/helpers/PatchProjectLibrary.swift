@@ -210,231 +210,211 @@ enum PatchProjectLibrary {
             packageID: summary.packageID,
             fileManager: fileManager
         )
-        if let occupiedPath = overlappingTargetPath```swift
-in decoded.project,
-excludingPackageID: summary.packageID,
-fileManager: fileManager
-) {
-if decoded.project.isPrivate,!authorCopy {
-throw PatchPackageError.privateOperationFailed
-}
-throw PatchPackageError.targetOccupied(occupiedPath)
-}
-let previousData = try existingURL.map { try readPackage(at: $0) }
-let originURL = try originFileURL(
-packageID: summary.packageID,
-fileManager: fileManager
-)
-let previousOriginData = try? Data(contentsOf: originURL)
-var savedURL: URL?
-do {
-if let origin {
-try saveOrigin(origin, to: originURL)
-}
-savedURL = try save(
-data: data,
-projectName: decoded.project.name,
-existingURL: existingURL,
-fileManager: fileManager
-)
-if summary.schemaVersion >= 2 {
-if PatchProjectAccessPolicy.shouldMaterializeWorkspace(
-project: decoded.project,
-isAuthorCopy: authorCopy
-) {
-_ = try PatchWorkspaceService.replaceWorkspace(
-with: decoded.project,
-fileManager: fileManager
-)
-} else {
-try PatchWorkspaceService.deleteWorkspace(
-projectID: decoded.project.id,
-fileManager: fileManager
-)
-}
-} else {
-try? PatchWorkspaceService.deleteWorkspace(
-projectID: decoded.project.id,
-fileManager: fileManager
-)
-}
-} catch {
-if let previousData, let existingURL {
-try? previousData.write(
-to: existingURL,
-options: [.atomic,.completeFileProtection]
-)
-} else if let savedURL, fileManager.fileExists(atPath: savedURL.path) {
-try? fileManager.removeItem(at: savedURL)
-}
-if let previousOriginData {
-try? previousOriginData.write(
-to: originURL,
-options: [.atomic,.completeFileProtection]
-)
-} else if origin!= nil, fileManager.fileExists(atPath: originURL.path) {
-try? fileManager.removeItem(at: originURL)
-}
-throw error
-}
-}
+        if let occupiedPath = overlappingTargetPath(
+            in: decoded.project,
+            excludingPackageID: summary.packageID,
+            fileManager: fileManager
+        ) {
+            if decoded.project.isPrivate, !authorCopy {
+                throw PatchPackageError.privateOperationFailed
+            }
+            throw PatchPackageError.targetOccupied(occupiedPath)
+        }
+        let previousData = try existingURL.map { try readPackage(at: $0) }
+        let originURL = try originFileURL(
+            packageID: summary.packageID,
+            fileManager: fileManager
+        )
+        let previousOriginData = try? Data(contentsOf: originURL)
+        var savedURL: URL?
+        do {
+            if let origin {
+                try saveOrigin(origin, to: originURL)
+            }
+            savedURL = try save(
+                data: data,
+                projectName: decoded.project.name,
+                existingURL: existingURL,
+                fileManager: fileManager
+            )
+            if summary.schemaVersion >= 2 {
+                if PatchProjectAccessPolicy.shouldMaterializeWorkspace(
+                    project: decoded.project,
+                    isAuthorCopy: authorCopy
+                ) {
+                    _ = try PatchWorkspaceService.replaceWorkspace(
+                        with: decoded.project,
+                        fileManager: fileManager
+                    )
+                } else {
+                    try PatchWorkspaceService.deleteWorkspace(
+                        projectID: decoded.project.id,
+                        fileManager: fileManager
+                    )
+                }
+            } else {
+                try? PatchWorkspaceService.deleteWorkspace(
+                    projectID: decoded.project.id,
+                    fileManager: fileManager
+                )
+            }
+        } catch {
+            if let previousData, let existingURL {
+                try? previousData.write(
+                    to: existingURL,
+                    options: [.atomic, .completeFileProtection]
+                )
+            } else if let savedURL, fileManager.fileExists(atPath: savedURL.path) {
+                try? fileManager.removeItem(at: savedURL)
+            }
+            if let previousOriginData {
+                try? previousOriginData.write(
+                    to: originURL,
+                    options: [.atomic, .completeFileProtection]
+                )
+            } else if origin != nil, fileManager.fileExists(atPath: originURL.path) {
+                try? fileManager.removeItem(at: originURL)
+            }
+            throw error
+        }
+    }
 
-static func delete(_ item: PatchLibraryItem, fileManager: FileManager =.default) throws {
-let backupRoot = try backupRootURL(fileManager: fileManager)
-guard PatchTransaction.latestReceipt(
-projectID: item.id,
-backupRoot: backupRoot,
-fileManager: fileManager
-) == nil else {
-throw PatchPackageError.activePatchCannotBeDeleted
-}
-if fileManager.fileExists(atPath: item.packageURL.path) {
-try fileManager.removeItem(at: item.packageURL)
-}
-try? PatchWorkspaceService.deleteWorkspace(projectID: item.id, fileManager: fileManager)
-try? PatchKeyStore.delete(for: item.summary)
-if let originURL = try? originFileURL(
-packageID: item.id,
-fileManager: fileManager
-), fileManager.fileExists(atPath: originURL.path) {
-try? fileManager.removeItem(at: originURL)
-}
-if let marker = try? authorCopyMarkerURL(
-packageID: item.id,
-fileManager: fileManager
-), fileManager.fileExists(atPath: marker.path) {
-try? fileManager.removeItem(at: marker)
-}
-}
+    static func delete(_ item: PatchLibraryItem, fileManager: FileManager = .default) throws {
+        let backupRoot = try backupRootURL(fileManager: fileManager)
+        guard PatchTransaction.latestReceipt(
+            projectID: item.id,
+            backupRoot: backupRoot,
+            fileManager: fileManager
+        ) == nil else {
+            throw PatchPackageError.activePatchCannotBeDeleted
+        }
+        if fileManager.fileExists(atPath: item.packageURL.path) {
+            try fileManager.removeItem(at: item.packageURL)
+        }
+        try? PatchWorkspaceService.deleteWorkspace(projectID: item.id, fileManager: fileManager)
+        try? PatchKeyStore.delete(for: item.summary)
+        if let originURL = try? originFileURL(
+            packageID: item.id,
+            fileManager: fileManager
+        ), fileManager.fileExists(atPath: originURL.path) {
+            try? fileManager.removeItem(at: originURL)
+        }
+        if let marker = try? authorCopyMarkerURL(
+            packageID: item.id,
+            fileManager: fileManager
+        ), fileManager.fileExists(atPath: marker.path) {
+            try? fileManager.removeItem(at: marker)
+        }
+    }
 
-static func synchronizeWorkspace(
-item: PatchLibraryItem,
-fileManager: FileManager =.default
-) throws -> PatchProject {
-guard item.summary.schemaVersion >= 2,
-item.canInspectContents,
-let baseProject = item.project,
-let contentKey = item.contentKey else {
-throw PatchPackageError.invalidProject
-}
-let workspace = try PatchWorkspaceService.ensureWorkspace(
-for: baseProject,
-fileManager: fileManager
-)
-let project = try PatchWorkspaceService.snapshot(
-baseProject: baseProject,
-workspaceURL: workspace,
-fileManager: fileManager
-)
-let original = try readPackage(at: item.packageURL)
-let updated = try PatchPackageCodec.update(
-original,
-project: project,
-contentKey: contentKey,
-schemaVersion: PatchPackageCodec.latestSchemaVersion
-)
-_ = try save(
-data: updated,
-projectName: project.name,
-existingURL: item.packageURL,
-fileManager: fileManager
-)
-return project
-}
+    static func synchronizeWorkspace(
+        item: PatchLibraryItem,
+        fileManager: FileManager = .default
+    ) throws -> PatchProject {
+        guard item.summary.schemaVersion >= 2,
+              item.canInspectContents,
+              let baseProject = item.project,
+              let contentKey = item.contentKey else {
+            throw PatchPackageError.invalidProject
+        }
+        let workspace = try PatchWorkspaceService.ensureWorkspace(
+            for: baseProject,
+            fileManager: fileManager
+        )
+        let project = try PatchWorkspaceService.snapshot(
+            baseProject: baseProject,
+            workspaceURL: workspace,
+            fileManager: fileManager
+        )
+        let original = try readPackage(at: item.packageURL)
+        let updated = try PatchPackageCodec.update(
+            original,
+            project: project,
+            contentKey: contentKey,
+            schemaVersion: PatchPackageCodec.latestSchemaVersion
+        )
+        _ = try save(
+            data: updated,
+            projectName: project.name,
+            existingURL: item.packageURL,
+            fileManager: fileManager
+        )
+        return project
+    }
 
-private static func sanitizedFilename(_ rawName: String) -> String {
-let allowed = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "-_ "))
-let scalars = rawName.unicodeScalars.map { allowed.contains($0)? Character(String($0)): "-" }
-let result = String(scalars)
-.trimmingCharacters(in:.whitespacesAndNewlines)
-.prefix(80)
-return result.isEmpty? "Patch": String(result)
-}
+    private static func sanitizedFilename(_ rawName: String) -> String {
+        let allowed = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "-_ "))
+        let scalars = rawName.unicodeScalars.map { allowed.contains($0) ? Character(String($0)) : "-" }
+        let result = String(scalars)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .prefix(80)
+        return result.isEmpty ? "Patch" : String(result)
+    }
 
-private static func authorCopiesRootURL(
-fileManager: FileManager
-) throws -> URL {
-let root = try packageRootURL(fileManager: fileManager)
-.appendingPathComponent(authorCopiesDirectoryName, isDirectory: true)
-try fileManager.createDirectory(at: root, withIntermediateDirectories: true)
-return root
-}
+    private static func authorCopiesRootURL(
+        fileManager: FileManager
+    ) throws -> URL {
+        let root = try packageRootURL(fileManager: fileManager)
+            .appendingPathComponent(authorCopiesDirectoryName, isDirectory: true)
+        try fileManager.createDirectory(at: root, withIntermediateDirectories: true)
+        return root
+    }
 
-private static func authorCopyMarkerURL(
-packageID: UUID,
-fileManager: FileManager
-) throws -> URL {
-try authorCopiesRootURL(fileManager: fileManager)
-.appendingPathComponent(packageID.uuidString)
-}
+    private static func authorCopyMarkerURL(
+        packageID: UUID,
+        fileManager: FileManager
+    ) throws -> URL {
+        try authorCopiesRootURL(fileManager: fileManager)
+            .appendingPathComponent(packageID.uuidString)
+    }
 
-private static func originsRootURL(fileManager: FileManager) throws -> URL {
-let root = try packageRootURL(fileManager: fileManager)
-.appendingPathComponent(originsDirectoryName, isDirectory: true)
-try fileManager.createDirectory(at: root, withIntermediateDirectories: true)
-return root
-}
+    private static func originsRootURL(fileManager: FileManager) throws -> URL {
+        let root = try packageRootURL(fileManager: fileManager)
+            .appendingPathComponent(originsDirectoryName, isDirectory: true)
+        try fileManager.createDirectory(at: root, withIntermediateDirectories: true)
+        return root
+    }
 
-private static func originFileURL(
-packageID: UUID,
-fileManager: FileManager
-) throws -> URL {
-try originsRootURL(fileManager: fileManager)
-.appendingPathComponent(packageID.uuidString)
-.appendingPathExtension("plist")
-}
+    private static func originFileURL(
+        packageID: UUID,
+        fileManager: FileManager
+    ) throws -> URL {
+        try originsRootURL(fileManager: fileManager)
+            .appendingPathComponent(packageID.uuidString)
+            .appendingPathExtension("plist")
+    }
 
-private static func loadOrigin(
-packageID: UUID,
-fileManager: FileManager
-) -> PatchPackageOrigin? {
-guard let url = try? originFileURL(
-packageID: packageID,
-fileManager: fileManager
-), let data = try? Data(contentsOf: url) else {
-return nil
-}
-return try? PropertyListDecoder().decode(PatchPackageOrigin.self, from: data)
-}
+    private static func loadOrigin(
+        packageID: UUID,
+        fileManager: FileManager
+    ) -> PatchPackageOrigin? {
+        guard let url = try? originFileURL(
+            packageID: packageID,
+            fileManager: fileManager
+        ), let data = try? Data(contentsOf: url) else {
+            return nil
+        }
+        return try? PropertyListDecoder().decode(PatchPackageOrigin.self, from: data)
+    }
 
-private static func saveOrigin(
-_ origin: PatchPackageOrigin,
-to url: URL
-) throws {
-let encoder = PropertyListEncoder()
-encoder.outputFormat =.binary
-try encoder.encode(origin).write(
-to: url,
-options: [.atomic,.completeFileProtection]
-)
-}
+    private static func saveOrigin(
+        _ origin: PatchPackageOrigin,
+        to url: URL
+    ) throws {
+        let encoder = PropertyListEncoder()
+        encoder.outputFormat = .binary
+        try encoder.encode(origin).write(
+            to: url,
+            options: [.atomic, .completeFileProtection]
+        )
+    }
 
-static func setPatchEnabled(_ packageID: UUID, enabled: Bool) throws {
-let defaults = UserDefaults.standard
-defaults.set(enabled, forKey: "patch_enabled_\(packageID.uuidString)")
-}
+    static func setPatchEnabled(_ packageID: UUID, enabled: Bool) throws {
+        let defaults = UserDefaults.standard
+        defaults.set(enabled, forKey: "patch_enabled_\(packageID.uuidString)")
+    }
 
-static func isPatchEnabled(_ packageID: UUID) -> Bool {
-return UserDefaults.standard.bool(forKey: "patch_enabled_\(packageID.uuidString)")
-}
-}
-``````swift
-static func setPatchEnabled(_ packageID: UUID, enabled: Bool) throws {
-let defaults = UserDefaults.standard
-defaults.set(enabled, forKey: "patch_enabled_\(packageID.uuidString)")
-}
-
-static func isPatchEnabled(_ packageID: UUID) -> Bool {
-return UserDefaults.standard.bool(forKey: "patch_enabled_\(packageID.uuidString)")
-}
-}
-``````swift
-static func setPatchEnabled(_ packageID: UUID, enabled: Bool) throws {
-let defaults = UserDefaults.standard
-defaults.set(enabled, forKey: "patch_enabled_\(packageID.uuidString)")
-}
-
-static func isPatchEnabled(_ packageID: UUID) -> Bool {
-return UserDefaults.standard.bool(forKey: "patch_enabled_\(packageID.uuidString)")
-}
+    static func isPatchEnabled(_ packageID: UUID) -> Bool {
+        return UserDefaults.standard.bool(forKey: "patch_enabled_\(packageID.uuidString)")
+    }
 }
