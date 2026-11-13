@@ -122,12 +122,7 @@ struct PatchProjectsView: View {
                 if selectedTab == .dashboard {
                     dashboardContent
                 } else if selectedTab == .installed {
-                    installedContent
-                } else if selectedTab == .search {
-                    searchContent
-                } else {
-                    Text("Settings View").foregroundStyle(.gray)
-                }
+                    installedContent     
             }
             .padding(.horizontal)
             .padding(.bottom, 30)
