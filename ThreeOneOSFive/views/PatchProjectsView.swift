@@ -5,12 +5,14 @@ enum AppTab: String, CaseIterable {
     case dashboard
     case search
     case installed
+    case settings
     
     var localizationKey: String {
         switch self {
             case .dashboard: return "dashboard"
             case .search: return "search"
             case .installed: return "installed"
+            case .settings: return "settings"
         }
     }
 }
@@ -28,15 +30,13 @@ struct PatchProjectsView: View {
     @State private var wallpaperPackages: [WallpaperStagedPackage] = []
 
     var body: some View {
-        ZStack {
-            Color(hex: "#0a0a0c").ignoresSafeArea()
-            
-            VStack(spacing: 0) {
-                headerView
-                tabSelector
-                contentArea
+            NavigationStack {
+                VStack(spacing: 0) {
+                    headerView
+                    tabSelector
+                    contentArea
+                }
             }
-        }
         .navigationTitle("Patch Projects")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -135,7 +135,11 @@ struct PatchProjectsView: View {
                     searchContent
                 } else if selectedTab == .installed {
                     installedContent    
-                }
+                 } else if selectedTab == .installed {
+                     installedContent    
+                 } else if selectedTab == .settings {
+                     settingsContent
+                 }
             }
             .padding(.horizontal)
             .padding(.bottom, 30)
@@ -172,6 +176,20 @@ struct PatchProjectsView: View {
             }
         }
     }
+    private var settingsContent: some View {
+        VStack(spacing: 20) {
+            sectionHeader(title: "Settings")
+            VStack(spacing: 12) {
+                Text("General Settings")
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding()
+                    .background(RoundedRectangle(cornerRadius: 20).fill(Color.white.opacity(0.03)))
+                    .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.05), lineWidth: 1))
+            }
+        }
+    }
+
 
     private var searchContent: some View {
         VStack(spacing: 20) {
