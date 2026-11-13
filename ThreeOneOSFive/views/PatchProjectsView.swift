@@ -122,7 +122,8 @@ struct PatchProjectsView: View {
                 if selectedTab == .dashboard {
                     dashboardContent
                 } else if selectedTab == .installed {
-                    installedContent     
+                    installedContent    
+                }
             }
             .padding(.horizontal)
             .padding(.bottom, 30)
