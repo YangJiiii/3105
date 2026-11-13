@@ -8,9 +8,9 @@ enum AppTab: String, CaseIterable {
     
     var localizationKey: String {
         switch self {
-        case .dashboard: return "inicio"
-        case .search: return "search"
-        case .installed: return "arquivos"
+            case .dashboard: return "dashboard"
+            case .search: return "search"
+            case .installed: return "installed"
         }
     }
 }
@@ -37,7 +37,7 @@ struct PatchProjectsView: View {
                 contentArea
             }
         }
-        .navigationTitle("EXTERNAL GH777")
+        .navigationTitle("Patch Projects")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
@@ -68,7 +68,7 @@ struct PatchProjectsView: View {
         VStack(spacing: 8) {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("EXTERNAL GH777")
+                    Text("Patch Projects")
                         .font(.system(size: 24, weight: .black))
                         .foregroundStyle(
                             LinearGradient(colors: [.white, .purple], startPoint: .top, endPoint: .bottom)
