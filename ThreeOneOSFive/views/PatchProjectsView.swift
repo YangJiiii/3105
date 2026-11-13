@@ -188,8 +188,6 @@ struct PatchProjectDetailView: View {
         }
         .confirmationDialog("Reset", isPresented: $showResetConfirmation) {
             Button("Reset", role: .destructive) { /* Logica reset */ }
-            Button("Cancel", role.confirmationDialog("Reset", isPresented: $showResetConfirmation) {
-            Button("Reset", role: .destructive) { /* Logica reset */ }
             Button("Cancel", role: .cancel) {}
         }
     }
