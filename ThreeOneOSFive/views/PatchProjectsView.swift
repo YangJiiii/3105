@@ -1190,3 +1190,18 @@ extension Color {
         )
     }
 }
+enum AppTab: String, CaseIterable {
+    case dashboard
+    case installed
+    case search
+    case settings
+    
+    var localizationKey: String {
+        switch self {
+        case .dashboard: return "tab.dashboard"
+        case .installed: return "tab.installed"
+        case .search: return "tab.search"
+        case .settings: return "tab.settings"
+        }
+    }
+}
