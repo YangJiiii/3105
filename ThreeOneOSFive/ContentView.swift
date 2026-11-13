@@ -1,7 +1,8 @@
 import SwiftUI
 
 struct ContentView: View {
-    @EnvironmentObject private var store: PatchProjectStore
+    // Alterado para StateObject para que a ContentView seja a dona da Store
+    @StateObject private var patchStore = PatchProjectStore() 
     
     var body: some View {
         NavigationStack {
@@ -9,22 +10,21 @@ struct ContentView: View {
                 // Fundo preto sólido para o estilo gamer
                 Color.black.ignoresSafeArea()
                 
-                // A PatchProjectsView é a tela principal que contém o Dashboard e a lista de patches
-               PatchProjectsView()
+                // CORREÇÃO: Agora passamos a store para a view
+                PatchProjectsView(store: patchStore) 
             }
-            .navigationTitle("GH777 EXTERNAL") // Título exatamente como na sua foto
+            .navigationTitle("GH777 EXTERNAL")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                // Se quiser adicionar algum botão extra no topo, coloque aqui
+                // Espaço para botões extras no topo
             }
         }
     }
 }
 
-// Preview para facilitar o teste no Xcode
+// Preview corrigido para funcionar com a nova estrutura
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
         ContentView()
-            .environmentObject(PatchProjectStore())
     }
 }
