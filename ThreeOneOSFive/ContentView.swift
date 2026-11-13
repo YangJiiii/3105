@@ -6,7 +6,13 @@ struct ContentView: View {
     var body: some View {
         TabView {
             // Aba de Início (Dashboard)
-            PatchProjectsView(store: patchStore)
+                VStack { 
+                    Text("external gh777 arquivos seguros")
+                        .font(.system(size: 24, weight: .bold, design: .rounded))
+                        .foregroundColor(.white)
+                        .padding()
+                    PatchProjectsView(store: patchStore)
+                }
                 .tabItem {
                     Label("Início", systemImage: "house.fill")
                 }
