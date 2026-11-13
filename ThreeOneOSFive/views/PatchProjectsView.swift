@@ -37,7 +37,7 @@ struct PatchProjectsView: View {
                     contentArea
                 }
             }
-        .navigationTitle("Patch Projects")
+        .navigationTitle("EXTERNAL GH777")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
@@ -68,7 +68,7 @@ struct PatchProjectsView: View {
         VStack(spacing: 8) {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Patch Projects")
+                    Text("EXTERNAL GH777")
                         .font(.system(size: 24, weight: .black))
                         .foregroundStyle(
                             LinearGradient(colors: [.white, .purple], startPoint: .top, endPoint: .bottom)
@@ -135,11 +135,9 @@ struct PatchProjectsView: View {
                     searchContent
                 } else if selectedTab == .installed {
                     installedContent    
-                 } else if selectedTab == .installed {
-                     installedContent    
-                 } else if selectedTab == .settings {
-                     settingsContent
-                 }
+                } else if selectedTab == .settings {
+                    settingsContent
+                }
             }
             .padding(.horizontal)
             .padding(.bottom, 30)
@@ -189,7 +187,6 @@ struct PatchProjectsView: View {
             }
         }
     }
-
 
     private var searchContent: some View {
         VStack(spacing: 20) {
@@ -435,17 +432,9 @@ private struct PatchProjectRow: View {
 
     private var rowDetail: String {
         if item.isLocked {
-            return language.text("patch.tap_to_unlock")
+            return language.text("patch.inicio")
         }
-        if item.project?.isPrivate == true, !item.isAuthorCopy {
-            return language.text("patch.private_received")
-        }
-        return language.text(
-            item.summary.schemaVersion >= 2
-                ? "patch.workspace_items_count"
-                : "patch.rules_count",
-            Int64((item.project?.rules.count ?? 0) + (item.project?.directories.count ?? 0))
-        )
+        return language.text("patch.arquivos")
     }
 }
 
@@ -942,168 +931,174 @@ private struct PatchProjectDetailView: View {
                     isWorking = false
                     shareRequest = PatchShareRequest(url: item.packageURL)
                 }
-            } catch let error as PatchPackageError {
-                await MainActor.run {
-                    isWorking = false
-                    actionAlert = PatchStoreAlert(
-                        titleKey: "common.failed",
-                        messageKey: privateErrorKey(for: error),
-                        messageArgument: privateErrorArgument(for: error)
-                    )
-                }
-            } catch {
-                await MainActor.run {
-                    isWorking = false
-                    actionAlert = PatchStoreAlert(titleKey: "common.failed", messageKey: "patch.error.invalid_project")
-                }
-            }
-        }
-    }
+            } catch let error as```swift
+await MainActor.run {
+store.reload()
+isWorking = false
+shareRequest = PatchShareRequest(url: item.packageURL)
+}
+} catch let error as PatchPackageError {
+await MainActor.run {
+isWorking = false
+actionAlert = PatchStoreAlert(
+titleKey: "common.failed",
+messageKey: privateErrorKey(for: error),
+messageArgument: privateErrorArgument(for: error)
+)
+}
+} catch {
+await MainActor.run {
+isWorking = false
+actionAlert = PatchStoreAlert(titleKey: "common.failed", messageKey: "patch.error.invalid_project")
+}
+}
+}
+}
 
-    private var changedRestoreMessage: String {
-        guard item?.project?.isPrivate != true || item?.isAuthorCopy == true else {
-            return language.text("patch.restore_changed_private_message", Int64(restoreChangedPaths.count))
-        }
-        var visiblePaths = restoreChangedPaths.prefix(5).joined(separator: "\n")
-        if restoreChangedPaths.count > 5 {
-            visiblePaths += "\n…"
-        }
-        return language.text("patch.restore_changed_message", Int64(restoreChangedPaths.count), visiblePaths)
-    }
+private var changedRestoreMessage: String {
+guard item?.project?.isPrivate!= true || item?.isAuthorCopy == true else {
+return language.text("patch.restore_changed_private_message", Int64(restoreChangedPaths.count))
+}
+var visiblePaths = restoreChangedPaths.prefix(5).joined(separator: "\n")
+if restoreChangedPaths.count > 5 {
+visiblePaths += "\n…"
+}
+return language.text("patch.restore_changed_message", Int64(restoreChangedPaths.count), visiblePaths)
+}
 
-    private func prepareRestore() {
-        guard let receipt else { return }
-        isWorking = true
-        Task.detached(priority: .userInitiated) {
-            do {
-                let inspection = try DevicePatchService.inspectRestore(receipt: receipt)
-                if inspection.changedTargets.isEmpty {
-                    try DevicePatchService.restore(receipt: receipt)
-                    await MainActor.run {
-                        isWorking = false
-                        actionAlert = PatchStoreAlert(titleKey: "common.done", messageKey: "patch.restored_message")
-                    }
-                } else {
-                    await MainActor.run {
-                        isWorking = false
-                        restoreChangedPaths = inspection.changedTargets.map(\.displayPath)
-                        showChangedRestoreConfirmation = true
-                    }
-                }
-            } catch let error as PatchPackageError {
-                await MainActor.run {
-                    isWorking = false
-                    actionAlert = PatchStoreAlert(
-                        titleKey: "common.failed",
-                        messageKey: privateErrorKey(for: error),
-                        messageArgument: privateErrorArgument(for: error)
-                    )
-                }
-            } catch {
-                await MainActor.run {
-                    isWorking = false
-                    actionAlert = PatchStoreAlert(titleKey: "common.failed", messageKey: "patch.error.restore")
-                }
-            }
-        }
-    }
+private func prepareRestore() {
+guard let receipt else { return }
+isWorking = true
+Task.detached(priority:.userInitiated) {
+do {
+let inspection = try DevicePatchService.inspectRestore(receipt: receipt)
+if inspection.changedTargets.isEmpty {
+try DevicePatchService.restore(receipt: receipt)
+await MainActor.run {
+isWorking = false
+actionAlert = PatchStoreAlert(titleKey: "common.done", messageKey: "patch.restored_message")
+}
+} else {
+await MainActor.run {
+isWorking = false
+restoreChangedPaths = inspection.changedTargets.map(\.displayPath)
+showChangedRestoreConfirmation = true
+}
+}
+} catch let error as PatchPackageError {
+await MainActor.run {
+isWorking = false
+actionAlert = PatchStoreAlert(
+titleKey: "common.failed",
+messageKey: privateErrorKey(for: error),
+messageArgument: privateErrorArgument(for: error)
+)
+}
+} catch {
+await MainActor.run {
+isWorking = false
+actionAlert = PatchStoreAlert(titleKey: "common.failed", messageKey: "patch.error.restore")
+}
+}
+}
+}
 
-    private func restore(allowChangedTargets: Bool) {
-        guard let receipt else { return }
-        isWorking = true
-        Task.detached(priority: .userInitiated) {
-            do {
-                try DevicePatchService.restore(receipt: receipt, allowChangedTargets: allowChangedTargets)
-                await MainActor.run {
-                    isWorking = false
-                    actionAlert = PatchStoreAlert(titleKey: "common.done", messageKey: "patch.restored_message")
-                }
-            } catch let error as PatchPackageError {
-                await MainActor.run {
-                    isWorking = false
-                    actionAlert = PatchStoreAlert(
-                        titleKey: "common.failed",
-                        messageKey: privateErrorKey(for: error),
-                        messageArgument: privateErrorArgument(for: error)
-                    )
-                }
-            } catch {
-                await MainActor.run {
-                    isWorking = false
-                    actionAlert = PatchStoreAlert(titleKey: "common.failed", messageKey: "patch.error.restore")
-                }
-            }
-        }
-    }
+private func restore(allowChangedTargets: Bool) {
+guard let receipt else { return }
+isWorking = true
+Task.detached(priority:.userInitiated) {
+do {
+try DevicePatchService.restore(receipt: receipt, allowChangedTargets: allowChangedTargets)
+await MainActor.run {
+isWorking = false
+actionAlert = PatchStoreAlert(titleKey: "common.done", messageKey: "patch.restored_message")
+}
+} catch let error as PatchPackageError {
+await MainActor.run {
+isWorking = false
+actionAlert = PatchStoreAlert(
+titleKey: "common.failed",
+messageKey: privateErrorKey(for: error),
+messageArgument: privateErrorArgument(for: error)
+)
+}
+} catch {
+await MainActor.run {
+isWorking = false
+actionAlert = PatchStoreAlert(titleKey: "common.failed", messageKey: "patch.error.restore")
+}
+}
+}
+}
 
-    private func resetToAppliedState() {
-        guard let receipt, let project = item?.project else { return }
-        isWorking = true
-        Task.detached(priority: .userInitiated) {
-            do {
-                try DevicePatchService.resetToAppliedState(receipt: receipt, project: project)
-                await MainActor.run {
-                    isWorking = false
-                    actionAlert = PatchStoreAlert(titleKey: "common.done", messageKey: "patch.reset_message")
-                }
-            } catch let error as PatchPackageError {
-                await MainActor.run {
-                    isWorking = false
-                    actionAlert = PatchStoreAlert(
-                        titleKey: "common.failed",
-                        messageKey: privateErrorKey(for: error),
-                        messageArgument: privateErrorArgument(for: error)
-                    )
-                }
-            } catch {
-                await MainActor.run {
-                    isWorking = false
-                    actionAlert = PatchStoreAlert(titleKey: "common.failed", messageKey: "patch.error.reset")
-                }
-            }
-        }
-    }
+private func resetToAppliedState() {
+guard let receipt, let project = item?.project else { return }
+isWorking = true
+Task.detached(priority:.userInitiated) {
+do {
+try DevicePatchService.resetToAppliedState(receipt: receipt, project: project)
+await MainActor.run {
+isWorking = false
+actionAlert = PatchStoreAlert(titleKey: "common.done", messageKey: "patch.reset_message")
+}
+} catch let error as PatchPackageError {
+await MainActor.run {
+isWorking = false
+actionAlert = PatchStoreAlert(
+titleKey: "common.failed",
+messageKey: privateErrorKey(for: error),
+messageArgument: privateErrorArgument(for: error)
+)
+}
+} catch {
+await MainActor.run {
+isWorking = false
+actionAlert = PatchStoreAlert(titleKey: "common.failed", messageKey: "patch.error.reset")
+}
+}
+}
+}
 
-    private func privateErrorKey(for error: PatchPackageError) -> String {
-        guard item?.project?.isPrivate == true, item?.isAuthorCopy == false else {
-            return error.localizationKey
-        }
-        return "patch.error.private_operation"
-    }
+private func privateErrorKey(for error: PatchPackageError) -> String {
+guard item?.project?.isPrivate == true, item?.isAuthorCopy == false else {
+return error.localizationKey
+}
+return "patch.error.private_operation"
+}
 
-    private func privateErrorArgument(for error: PatchPackageError) -> String? {
-        guard item?.project?.isPrivate == true, item?.isAuthorCopy == false else {
-            return error.localizationArgument
-        }
-        return nil
-    }
+private func privateErrorArgument(for error: PatchPackageError) -> String? {
+guard item?.project?.isPrivate == true, item?.isAuthorCopy == false else {
+return error.localizationArgument
+}
+return nil
+}
 }
 
 private struct PatchShareRequest: Identifiable {
-    let id = UUID()
-    let url: URL
+let id = UUID()
+let url: URL
 }
 
 private struct PatchActivityView: UIViewControllerRepresentable {
-    let items: [Any]
-    func makeUIViewController(context: Context) -> UIActivityViewController {
-        UIActivityViewController(activityItems: items, applicationActivities: nil)
-    }
-    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
+let items:
+func makeUIViewController(context: Context) -> UIActivityViewController {
+UIActivityViewController(activityItems: items, applicationActivities: nil)
+}
+func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 
 extension Color {
-    init(hex: String) {
-        let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
-        var int: UInt64 = 0
-        Scanner(string: hex).scanHexInt64(&int)
-        let a, r, g, b: UInt64
-        switch hex.count {
-        case 3: (a, r, g, b) = (255, (int >> 8) * 17, (int >> 4 & 0xF) * 17, (int & 0xF) * 17)
-        case 6: (a, r, g, b) = (255, int >> 16, int >> 8 & 0xFF, int & 0xFF)
-        case 8: (a, r, g, b) = (int >> 24, int >> 16 & 0xFF, int >> 8 & 0xFF, int & 0xFF)
-        default: (a, r, g, b) = (1, 1, 1, 0)
-        }
-        self.init(.sRGB, red: Double(r) / 255, green: Double(g) / 255, blue: Double(b) / 255, opacity: Double(a) / 255)
-    }
+init(hex: String) {
+let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
+var int: UInt64 = 0
+Scanner(string: hex).scanHexInt64(&int)
+let a, r, g, b: UInt64
+switch hex.count {
+case 3: (a, r, g, b) = (255, (int >> 8) * 17, (int >> 4 & 0xF) * 17, (int & 0xF)  17)
+case 6: (a, r, g, b) = (255, int >> 16, int >> 8 & 0xFF, int & 0xFF)
+case 8: (a, r, g, b) = (int >> 24, int >> 16 & 0xFF, int >> 8 & 0xFF, int & 0xFF)
+default: (a, r, g, b) = (1, 1, 1, 0)
+}
+self.init(.sRGB, red: Double(r) / 255, green: Double(g) / 255, blue: Double(b) / 255, opacity: Double(a) / 255)
+}
 }
