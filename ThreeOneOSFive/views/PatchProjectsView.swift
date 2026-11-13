@@ -1205,3 +1205,15 @@ enum AppTab: String, CaseIterable {
         }
     }
 }
+enum AppTab: String, CaseIterable {
+    case dashboard
+    case installed
+    // Removi search e settings daqui para eles não existirem mais no sistema
+    
+    var localizationKey: String {
+        switch self {
+        case .dashboard: return "inicio"
+        case .installed: return "arquivos"
+        }
+    }
+}
