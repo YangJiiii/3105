@@ -222,7 +222,7 @@ final class PatchProjectStore: ObservableObject {
                 ) {
                     await self?.requestPassword(pending: pending)
                 } else {
-                    awaitself?.finishOperation(successMessageKey: "patch.imported_message")
+                    await self.finishOperation(successMessageKey: "patch.imported_message")
                 }
             } catch let error as PatchPackageError {
                 await self?.failOperation(error)
