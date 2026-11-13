@@ -116,15 +116,20 @@ struct PatchProjectsView: View {
     }
 
     @ViewBuilder
-    private var contentArea: some View {
-        ScrollView {
-            VStack(spacing: 20) {
-                if selectedTab == .dashboard {
-                    dashboardContent
-                } else if selectedTab == .installed {
-                    installedContent    
-                }
+private var contentArea: some View {
+    ScrollView {
+        VStack(spacing: 20) {
+            if selectedTab == .dashboard {
+                dashboardContent
+            } else if selectedTab == .search {
+                searchContent // Adicionado para a aba search funcionar
+            } else if selectedTab == .installed {
+                installedContent    
             }
+        }
+    }
+}
+
             .padding(.horizontal)
             .padding(.bottom, 30)
         }
@@ -1188,12 +1193,13 @@ extension Color {
 }
 enum AppTab: String, CaseIterable {
     case dashboard
+    case search    // Adicionado de volta
     case installed
-    // Removi search e settings daqui para eles não existirem mais no sistema
     
     var localizationKey: String {
         switch self {
         case .dashboard: return "inicio"
+        case .search: return "search"    // Adicionado a tradução
         case .installed: return "arquivos"
         }
     }
