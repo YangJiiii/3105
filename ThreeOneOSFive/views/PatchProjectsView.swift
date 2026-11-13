@@ -68,7 +68,7 @@ struct PatchProjectsView: View {
         VStack(spacing: 8) {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Patch Projects")
+                    Text("EXTERNAL GH777")
                         .font(.system(size: 24, weight: .black))
                         .foregroundStyle(
                             LinearGradient(colors: [.white, .purple], startPoint: .top, endPoint: .bottom)
@@ -653,40 +653,7 @@ private struct PatchProjectDetailView: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 20)
                     }
-                } else if isWorkspaceProject {
-                    Section {
-                        ForEach(project.allBundleIdentifiers, id: \.self) { bundleID in
-                            Label {
-                                Text(bundleID)
-                                    .font(.subheadline.monospaced())
-                            } icon: {
-                                Image(systemName: "app.dashed")
-                                    .foregroundStyle(AppTheme.accent)
-                            }
-                        }
-                        LabeledContent(language.text("patch.files")) {
-                            Text("\(project.rules.count)")
-                        }
-                        LabeledContent(language.text("patch.folders")) {
-                            Text("\(project.directories.count)")
-                        }
-                        if let workspaceURL = item.workspaceURL {
-                            NavigationLink {
-                                FileBrowserView(
-                                    containerPath: workspaceURL.path,
-                                    title: project.name,
-                                    bundleID: nil
-                                )
-                            } label: {
-                                Label(language.text("patch.open_workspace"), systemImage: "folder")
-                            }
-                        }
-                    } header: {
-                        Text(language.text("patch.workspace"))
-                    } footer: {
-                        Text(language.text("patch.workspace_detail_footer"))
-                    }
-                } else {
+                }  else {
                     Section {
                         ForEach(project.rules) { rule in
                             Button {
@@ -708,16 +675,6 @@ private struct PatchProjectDetailView: View {
                         Text(language.text("patch.rules"))
                     } footer: {
                         Text(language.text("patch.legacy_footer"))
-                    }
-                }
-
-                Section(language.text("patch.password")) {
-                    HStack(spacing: 12) {
-                        Image(systemName: item.summary.isPasswordProtected ? "lock.fill" : "lock.open")
-                            .foregroundStyle(AppTheme.accent)
-                            .frame(width: 24)
-                        Text(language.text(item.summary.isPasswordProtected ? "patch.password_locked" : "patch.no_password"))
-                            .font(.subheadline)
                     }
                 }
 
