@@ -94,7 +94,7 @@ struct PatchProjectsView: View {
             Text("INSTALLED").font(.system(size: 18, weight: .bold, design: .monospaced)).foregroundColor(.gray).padding(.top)
             ScrollView {
                 LazyVStack(spacing: 15) {
-                    ForEach(store.allItems.filter { $0.project?.isEnabled == true }) { item in
+                    ForEach(store.items.filter { $0.project?.isEnabled == true }) { item in
                         PatchCard(item: item, store: store)
                     }
                 }.padding()
@@ -188,6 +188,8 @@ struct PatchProjectDetailView: View {
         }
         .confirmationDialog("Reset", isPresented: $showResetConfirmation) {
             Button("Reset", role: .destructive) { /* Logica reset */ }
+            Button("Cancel", role.confirmationDialog("Reset", isPresented: $showResetConfirmation) {
+            Button("Reset", role: .destructive) { /* Logica reset */ }
             Button("Cancel", role: .cancel) {}
         }
     }
@@ -197,7 +199,7 @@ private struct PatchStorePresentationModifier: ViewModifier {
     @ObservedObject var store: PatchProjectStore
     func body(content: Content) -> some View {
         content
-            .sheet(item: $store.passwordRequest, onDismiss: store.cancelUnlock) { request in
+            .sheet(item: $store.customPasswordRequest, onDismiss: store.cancelUnlock) { request in
                 PatchUnlockView(store: store, request: request)
             }
     }
