@@ -653,31 +653,7 @@ private struct PatchProjectDetailView: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 20)
                     }
-                }  else {
-                    Section {
-                        ForEach(project.rules) { rule in
-                            Button {
-                                editingRule = rule
-                            } label: {
-                                HStack(spacing: 10) {
-                                    ruleSummary(rule)
-                                    Spacer(minLength: 8)
-                                    Image(systemName: "chevron.right")
-                                        .font(.caption.weight(.semibold))
-                                        .foregroundStyle(.tertiary)
-                                }
-                                .contentShape(Rectangle())
-                            }
-                            .buttonStyle(.plain)
-                            .accessibilityHint(language.text("patch.edit_rule_hint"))
-                        }
-                    } header: {
-                        Text(language.text("patch.rules"))
-                    } footer: {
-                        Text(language.text("patch.legacy_footer"))
-                    }
-                }
-
+                }  
                 Section {
                     Button {
                         showApplyConfirmation = true
@@ -700,10 +676,6 @@ private struct PatchProjectDetailView: View {
                             actionLabel("patch.restore", systemImage: "arrow.uturn.backward.circle")
                         }
                         .disabled(isWorking)
-                    }
-
-                    Button(action: prepareExport) {
-                        actionLabel("patch.export", systemImage: "square.and.arrow.up")
                     }
                     .disabled(isWorking)
                 } footer: {
