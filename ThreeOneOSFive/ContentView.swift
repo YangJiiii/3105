@@ -1,30 +1,23 @@
 import SwiftUI
 
 struct ContentView: View {
-    // Alterado para StateObject para que a ContentView seja a dona da Store
-    @StateObject private var patchStore = PatchProjectStore() 
-    
-    var body: some View {
-        NavigationStack {
-            ZStack {
-                // Fundo preto sólido para o estilo gamer
-                Color.black.ignoresSafeArea()
-                
-                // CORREÇÃO: Agora passamos a store para a view
-                PatchProjectsView(store: patchStore) 
-            }
-            .navigationTitle("GH777 EXTERNAL")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                // Espaço para botões extras no topo
-            }
-        }
-    }
-}
+    @StateObject private var patchStore = PatchProjectStore()
 
-// Preview corrigido para funcionar com a nova estrutura
-struct ContentView_Previews: PreviewProvider {
-    static var previews: some View {
-        ContentView()
+    var body: some View {
+        TabView {
+            // Aba de Início (Dashboard)
+            PatchProjectsView(store: patchStore)
+                .tabItem {
+                    Label("Início", systemImage: "house.fill")
+                }
+            
+            // Aba de Arquivos (Installed)
+            // Aqui você coloca a view que gerencia os arquivos instalados
+            Text("Tela de Arquivos") 
+                .tabItem {
+                    Label("Arquivos", systemImage: "folder.fill")
+                }
+        }
+        .accentColor(.purple) // Cor roxa para combinar com o estilo gamer
     }
 }
