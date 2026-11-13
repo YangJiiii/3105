@@ -37,7 +37,7 @@ struct PatchProjectsView: View {
                     contentArea
                 }
             }
-        .navigationTitle("EXTERNAL GH777")
+        .navigationTitle("External GH777")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
@@ -435,10 +435,19 @@ private struct PatchProjectRow: View {
 
     private var rowDetail: String {
         if item.isLocked {
-            return language.text("patch.inicio")
+            return language.text("patch.tap_to_unlock")
         }
-        return language.text("patch.arquivos")
+        if item.project?.isPrivate == true, !item.isAuthorCopy {
+            return language.text("patch.private_received")
+        }
+        return language.text(
+            item.summary.schemaVersion >= 2
+                ? "patch.workspace_items_count"
+                : "patch.rules_count",
+            Int64((item.project?.rules.count ?? 0) + (item.project?.directories.count ?? 0))
+        )
     }
+}
 
 private enum InstalledContentKind {
     case patch
