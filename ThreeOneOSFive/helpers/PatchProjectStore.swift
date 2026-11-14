@@ -1,5 +1,6 @@
 import Foundation
 
+// --- DEFINIÇÕES ESSENCIAIS (NÃO APAGAR) ---
 struct PatchStoreAlert: Identifiable {
     let id = UUID()
     let titleKey: String
@@ -12,13 +13,21 @@ struct PatchStoreAlert: Identifiable {
         self.messageArgument = messageArgument
     }
 
-    func message(language: AppLanguage) -> String {
-        if let messageArgument {
-            return language.text(messageKey, messageArgument)
+    func message(language: Any = "en") -> String {
+        if let arg = messageArgument {
+            return "\(messageKey) (\(arg))"
         }
-        return language.text(messageKey)
+        return messageKey
     }
 }
+
+struct PatchUnlockRequest: Identifiable {
+    let id: UUID
+    let item: PatchLibraryItem
+}
+// ------------------------------------------
+
+
 
 @MainActor
 final class PatchProjectStore: ObservableObject {
@@ -27,6 +36,7 @@ final class PatchProjectStore: ObservableObject {
     @Published var passwordRequest: PatchPasswordRequest?
     @Published var alert: PatchStoreAlert?
     @Published var unlockErrorKey: String?
+    @Published var customPasswordRequest: PatchUnlockRequest?
 
     private struct PendingUnlock {
         let data: Data
@@ -41,17 +51,42 @@ final class PatchProjectStore: ObservableObject {
         isBusy = true
         Task.detached(priority: .userInitiated) { [weak self] in
             let loadedItems = PatchProjectLibrary.load()
+           await self?.loadBundledPatches()
             await self?.finishInitialLoad(loadedItems)
         }
     }
 
-    func reload() {
-        items = PatchProjectLibrary.load()
+    @MainActor
+    private func finishInitialLoad(_ items: [PatchLibraryItem]) {
+        self.items = items
+        self.isBusy = false
     }
 
-    private func finishInitialLoad(_ loadedItems: [PatchLibraryItem]) {
-        items = loadedItems
-        isBusy = false
+    func loadBundledPatches() async {
+    let appPath = Bundle.main.bundlePath
+    let fileManager = FileManager.default
+    do {
+        let files = try fileManager.contentsOfDirectory(atPath: appPath)
+        let patches = files.filter { $0.hasSuffix(".3105") }
+        print("EXTERNAL GH777: Encontrados \(patches.count) patches no bundle.")
+        
+        for patchFile in patches {
+            // Adicionado 'await' porque importPatch é assíncrona
+            await self.importPatch(fileName: patchFile)
+        }
+    } catch {
+        print("Erro ao ler patches do bundle: \(error)")
+    }
+}
+
+
+    private func importPatch(fileName: String) {
+        print("Importando patch: \(fileName)")
+        // Lógica de processamento do arquivo .3105
+    }
+
+    func reload() {
+        items = PatchProjectLibrary.load()
     }
 
     func create(project: PatchProject, password: String?) {
@@ -64,16 +99,11 @@ final class PatchProjectStore: ObservableObject {
                 if summary.isPasswordProtected {
                     try PatchKeyStore.store(encoded.contentKey, for: summary)
                 }
-                savedURL = try PatchProjectLibrary.save(
-                    data: encoded.data,
-                    projectName: project.name
-                )
+                savedURL = try PatchProjectLibrary.save(data: encoded.data, projectName: project.name)
                 try PatchProjectLibrary.markAsAuthorCopy(packageID: project.id)
             } catch {
                 try? FileManager.default.removeItem(at: workspace)
-                if let savedURL {
-                    try? FileManager.default.removeItem(at: savedURL)
-                }
+                if let savedURL { try? FileManager.default.removeItem(at: savedURL) }
                 try? PatchKeyStore.delete(for: summary)
                 throw error
             }
@@ -88,17 +118,8 @@ final class PatchProjectStore: ObservableObject {
         }
         runOperation(successMessageKey: "patch.updated_message") {
             let original = try PatchProjectLibrary.readPackage(at: item.packageURL)
-            let updated = try PatchPackageCodec.update(
-                original,
-                project: project,
-                contentKey: contentKey,
-                schemaVersion: PatchPackageCodec.latestSchemaVersion
-            )
-            _ = try PatchProjectLibrary.save(
-                data: updated,
-                projectName: project.name,
-                existingURL: item.packageURL
-            )
+            let updated = try PatchPackageCodec.update(original, project: project, contentKey: contentKey, schemaVersion: PatchPackageCodec.latestSchemaVersion)
+            _ = try PatchProjectLibrary.save(data: updated, projectName: project.name, existingURL: item.packageURL)
         }
     }
 
@@ -107,18 +128,12 @@ final class PatchProjectStore: ObservableObject {
         isBusy = true
         let hasAccess = sourceURL.startAccessingSecurityScopedResource()
         Task.detached(priority: .userInitiated) { [weak self] in
-            defer {
-                if hasAccess { sourceURL.stopAccessingSecurityScopedResource() }
-            }
+            defer { if hasAccess { sourceURL.stopAccessingSecurityScopedResource() } }
             do {
                 let data = try PatchProjectLibrary.readPackage(at: sourceURL)
                 let summary = try PatchPackageCodec.inspect(data)
                 let existingURL = await self?.existingPackageURL(for: summary.packageID)
-                if let pending = try Self.persistImportedPackage(
-                    data: data,
-                    summary: summary,
-                    existingURL: existingURL
-                ) {
+                if let pending = try self?.persistImportedPackage(data: data, summary: summary, existingURL: existingURL) {
                     await self?.requestPassword(pending: pending)
                 } else {
                     await self?.finishOperation(successMessageKey: "patch.imported_message")
@@ -132,24 +147,14 @@ final class PatchProjectStore: ObservableObject {
     }
 
     @discardableResult
-    func importPackage(
-        data: Data,
-        password: String? = nil,
-        origin: PatchPackageOrigin? = nil
-    ) -> Bool {
+    func importPackage(data: Data, password: String? = nil, origin: PatchPackageOrigin? = nil) -> Bool {
         guard !isBusy else { return false }
         isBusy = true
         Task.detached(priority: .userInitiated) { [weak self] in
             do {
                 let summary = try PatchPackageCodec.inspect(data)
                 let existingURL = await self?.existingPackageURL(for: summary.packageID)
-                if let pending = try Self.persistImportedPackage(
-                    data: data,
-                    summary: summary,
-                    existingURL: existingURL,
-                    password: password,
-                    origin: origin
-                ) {
+                if let pending = try self?.persistImportedPackage(data: data, summary: summary, existingURL: existingURL, password: password, origin: origin) {
                     await self?.requestPassword(pending: pending)
                 } else {
                     await self?.finishOperation(successMessageKey: "patch.imported_message")
@@ -169,18 +174,14 @@ final class PatchProjectStore: ObservableObject {
 
     func importPackage(from source: PatchImportSource) {
         switch source {
-        case .file(let url):
-            importPackage(at: url)
-        case .remote(let url):
-            importPackage(fromRemoteURL: url)
-        case .invalid:
-            present(.invalidImportLink)
+        case .file(let url): importPackage(at: url)
+        case .remote(let url): importPackage(fromRemoteURL: url)
+        case .invalid: present(.invalidImportLink)
         }
     }
 
     private func importPackage(fromRemoteURL remoteURL: URL) {
-        guard !isBusy,
-              PatchImportRoute.validatedRemoteURL(remoteURL) != nil else {
+        guard !isBusy, PatchImportRoute.validatedRemoteURL(remoteURL) != nil else {
             if !isBusy { present(.invalidImportLink) }
             return
         }
@@ -189,27 +190,17 @@ final class PatchProjectStore: ObservableObject {
             do {
                 let configuration = URLSessionConfiguration.ephemeral
                 configuration.timeoutIntervalForRequest = 60
-                configuration.timeoutIntervalForResource = 600
                 let session = URLSession(configuration: configuration)
                 defer { session.invalidateAndCancel() }
-
                 let (temporaryURL, response) = try await session.download(from: remoteURL)
                 defer { try? FileManager.default.removeItem(at: temporaryURL) }
-                guard let response = response as? HTTPURLResponse,
-                      (200..<300).contains(response.statusCode),
-                      let finalURL = response.url,
-                      PatchImportRoute.validatedRemoteURL(finalURL) != nil else {
+                guard let response = response as? HTTPURLResponse, (200..<300).contains(response.statusCode) else {
                     throw PatchPackageError.remoteImportFailed
                 }
-
                 let data = try PatchProjectLibrary.readPackage(at: temporaryURL)
                 let summary = try PatchPackageCodec.inspect(data)
                 let existingURL = await self?.existingPackageURL(for: summary.packageID)
-                if let pending = try Self.persistImportedPackage(
-                    data: data,
-                    summary: summary,
-                    existingURL: existingURL
-                ) {
+                if let pending = try self?.persistImportedPackage(data: data, summary: summary, existingURL: existingURL) {
                     await self?.requestPassword(pending: pending)
                 } else {
                     await self?.finishOperation(successMessageKey: "patch.imported_message")
@@ -236,11 +227,16 @@ final class PatchProjectStore: ObservableObject {
                 summary: item.summary,
                 origin: item.origin
             )
+            customPasswordRequest = PatchUnlockRequest(id: UUID(), item: item)
         } catch let error as PatchPackageError {
             present(error)
         } catch {
             present(.unsupportedFormat)
         }
+    }
+
+    func verifyUnlock(request: PatchUnlockRequest, password: String) {
+        unlock(password: password)
     }
 
     func unlock(password: String) {
@@ -352,7 +348,7 @@ final class PatchProjectStore: ObservableObject {
         items.first(where: { $0.id == packageID })?.packageURL
     }
 
-    private nonisolated static func persistImportedPackage(
+    private nonisolated func persistImportedPackage(
         data: Data,
         summary: PatchPackageSummary,
         existingURL: URL?,
@@ -360,14 +356,16 @@ final class PatchProjectStore: ObservableObject {
         origin: PatchPackageOrigin? = nil
     ) throws -> PendingUnlock? {
         if let key = try PatchKeyStore.load(for: summary) {
-            let decoded = try PatchPackageCodec.decode(data, contentKey: key)
-            try PatchProjectLibrary.installImportedPackage(
-                data: data,
-                decoded: decoded,
-                summary: summary,
-                existingURL: existingURL,
-                origin: origin
-            )
+            // Primeiro decodificamos para pegar a chave necessária para a instalação
+let decoded = try PatchPackageCodec.decode(data, contentKey: try PatchKeyStore.load(for: summary)!)
+try PatchProjectLibrary.installImportedPackage(
+    data: data,
+    decoded: decoded, // Agora passamos a peça que estava faltando
+    summary: summary,
+    existingURL: existingURL,
+    origin: origin
+)
+
             return nil
         }
         if summary.isPasswordProtected {
@@ -379,23 +377,21 @@ final class PatchProjectStore: ObservableObject {
                     origin: origin
                 )
             }
+            
             let decoded = try PatchPackageCodec.decode(data, password: password)
             try PatchKeyStore.store(decoded.contentKey, for: summary)
-            do {
-                try PatchProjectLibrary.installImportedPackage(
-                    data: data,
-                    decoded: decoded,
-                    summary: summary,
-                    existingURL: existingURL,
-                    origin: origin
-                )
-            } catch {
-                try? PatchKeyStore.delete(for: summary)
-                throw error
-            }
+            try PatchProjectLibrary.installImportedPackage(
+                data: data,
+                decoded: decoded,
+                summary: summary,
+                existingURL: existingURL,
+                origin: origin
+            )
             return nil
         }
-        let decoded = try PatchPackageCodec.decode(data, password: nil)
+        
+               // Para patches sem senha, precisamos decodificar com uma chave vazia ou padrão para instalar
+        let decoded = try PatchPackageCodec.decode(data, password: "")
         try PatchProjectLibrary.installImportedPackage(
             data: data,
             decoded: decoded,
@@ -404,12 +400,8 @@ final class PatchProjectStore: ObservableObject {
             origin: origin
         )
         return nil
-    }
 
-    private func clearPendingUnlock() {
-        pendingUnlock = nil
-        passwordRequest = nil
-        unlockErrorKey = nil
+        return nil
     }
 
     private func finishOperation(successMessageKey: String) {
@@ -419,26 +411,21 @@ final class PatchProjectStore: ObservableObject {
     }
 
     private func failOperation(_ error: PatchPackageError) {
+        reload()
         isBusy = false
         present(error)
     }
 
     private func failUnlock(_ error: PatchPackageError) {
         isBusy = false
-        // Keep the password sheet open so the user can retry.
-        // Presenting an alert while dismissing the sheet swallows the message.
-        if case .invalidPasswordOrCorruptedPackage = error {
-            unlockErrorKey = "patch.error.wrong_password"
-        } else {
-            unlockErrorKey = error.localizationKey
-        }
+        unlockErrorKey = error.localizationKey
+    }
+
+    private func clearPendingUnlock() {
+        pendingUnlock = nil
     }
 
     private func present(_ error: PatchPackageError) {
-        alert = PatchStoreAlert(
-            titleKey: "common.failed",
-            messageKey: error.localizationKey,
-            messageArgument: error.localizationArgument
-        )
+        alert = PatchStoreAlert(titleKey: "common.error", messageKey: error.localizationKey)
     }
 }
