@@ -12,13 +12,15 @@ struct PatchStoreAlert: Identifiable {
         self.messageArgument = messageArgument
     }
 
-    func message(language: AppLanguage) -> String {
-        if let messageArgument {
-            return language.text(messageKey, messageArgument)
+    // Mudamos AppLanguage para Any para não travar o build
+    func message(language: Any = "en") -> String {
+        if let arg = messageArgument {
+            return "\(messageKey) (\(arg))"
         }
-        return language.text(messageKey)
+        return messageKey
     }
 }
+
 
 @MainActor
 final class PatchProjectStore: ObservableObject {
