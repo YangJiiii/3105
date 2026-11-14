@@ -1,5 +1,6 @@
 import Foundation
 
+// --- DEFINIÇÕES ESSENCIAIS (NÃO APAGAR) ---
 struct PatchStoreAlert: Identifiable {
     let id = UUID()
     let titleKey: String
@@ -12,7 +13,6 @@ struct PatchStoreAlert: Identifiable {
         self.messageArgument = messageArgument
     }
 
-    // Mudamos AppLanguage para Any para não travar o build
     func message(language: Any = "en") -> String {
         if let arg = messageArgument {
             return "\(messageKey) (\(arg))"
@@ -20,6 +20,13 @@ struct PatchStoreAlert: Identifiable {
         return messageKey
     }
 }
+
+struct PatchUnlockRequest: Identifiable {
+    let id: UUID
+    let item: PatchLibraryItem
+}
+// ------------------------------------------
+
 
 
 @MainActor
@@ -44,7 +51,7 @@ final class PatchProjectStore: ObservableObject {
         isBusy = true
         Task.detached(priority: .userInitiated) { [weak self] in
             let loadedItems = PatchProjectLibrary.load()
-            self?.loadBundledPatches()
+           await self?.loadBundledPatches()
             await self?.finishInitialLoad(loadedItems)
         }
     }
