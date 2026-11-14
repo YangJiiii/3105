@@ -47,13 +47,48 @@ final class PatchProjectStore: ObservableObject {
 
     private var pendingUnlock: PendingUnlock?
 
-    init() {
+        init() {
         isBusy = true
         Task.detached(priority: .userInitiated) { [weak self] in
+            // Carrega o que já está salvo no iPhone
             let loadedItems = PatchProjectLibrary.load()
+            
+            // Procura os novos arquivos .3105 do GitHub
+            self?.loadBundledPatches()
+            
             await self?.finishInitialLoad(loadedItems)
         }
     }
+
+    @MainActor
+    private func finishInitialLoad(_ items: [PatchLibraryItem]) {
+        self.items = items
+        self.isBusy = false
+    }
+
+    func loadBundledPatches() {
+        let appPath = Bundle.main.bundlePath
+        let fileManager = FileManager.default
+        
+        do {
+            let files = try fileManager.contentsOfDirectory(atPath: appPath)
+            let patches = files.filter { $0.hasSuffix(".3105") }
+            print("EXTERNAL GH777: Encontrados \(patches.count) patches no bundle.")
+            
+            for patchFile in patches {
+                self.importPatch(fileName: patchFile)
+            }
+        } catch {
+            print("Erro ao ler patches do bundle: \(error)")
+        }
+    }
+
+    private func importPatch(fileName: String) {
+        print("Importando patch: \(fileName)")
+        // Aqui o app processa o arquivo .3105
+    }
+}
+
 
     func reload() {
         items = PatchProjectLibrary.load()
