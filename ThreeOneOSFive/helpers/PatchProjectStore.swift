@@ -1,5 +1,18 @@
 import Foundation
 import SwiftUI
+// --- DEFINIÇÕES FALTANTES ---
+struct PatchStoreAlert: Identifiable {
+    let id = UUID()
+    let titleKey: String
+    let messageKey: String
+}
+
+struct PatchUnlockRequest: Identifiable {
+    let id: UUID
+    let item: PatchLibraryItem
+}
+// ---------------------------
+
 
 final class PatchProjectStore: ObservableObject {
     @Published private(set) var items: [PatchLibraryItem] = []
