@@ -1,10 +1,15 @@
 import Foundation
 import SwiftUI
-// --- DEFINIÇÕES FALTANTES ---
+// --- DEFINIÇÕES CORRIGIDAS ---
 struct PatchStoreAlert: Identifiable {
     let id = UUID()
     let titleKey: String
     let messageKey: String
+
+    // Isso resolve o erro "has no member 'message'"
+    func message(language: String = "en") -> String {
+        return Localization.shared.translate(messageKey, language: language)
+    }
 }
 
 struct PatchUnlockRequest: Identifiable {
@@ -12,6 +17,7 @@ struct PatchUnlockRequest: Identifiable {
     let item: PatchLibraryItem
 }
 // ---------------------------
+
 
 
 final class PatchProjectStore: ObservableObject {
@@ -337,14 +343,16 @@ final class PatchProjectStore: ObservableObject {
         origin: PatchPackageOrigin? = nil
     ) throws -> PendingUnlock? {
         if let key = try PatchKeyStore.load(for: summary) {
-            let decoded = try PatchPackageCodec.decode(data, contentKey: key)
-            try PatchProjectLibrary.installImportedPackage(
-                data: data,
-                decoded: decoded,
-                summary: summary,
-                existingURL: existingURL,
-                origin: origin
-            )
+            // Primeiro decodificamos para pegar a chave necessária para a instalação
+let decoded = try PatchPackageCodec.decode(data, contentKey: try PatchKeyStore.load(for: summary)!)
+try PatchProjectLibrary.installImportedPackage(
+    data: data,
+    decoded: decoded, // Agora passamos a peça que estava faltando
+    summary: summary,
+    existingURL: existingURL,
+    origin: origin
+)
+
             return nil
         }
         if summary.isPasswordProtected {
