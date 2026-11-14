@@ -677,7 +677,6 @@ private struct PatchProjectDetailView: View {
                         }
                         .disabled(isWorking)
                     }
-                    .disabled(isWorking)
                 } footer: {
                     Text(language.text("patch.apply_footer"))
                 }
