@@ -1,14 +1,15 @@
 import Foundation
 import SwiftUI
-// --- DEFINIÇÕES CORRIGIDAS ---
+// --- DEFINIÇÕES CORRIGIDAS V2 ---
 struct PatchStoreAlert: Identifiable {
     let id = UUID()
     let titleKey: String
     let messageKey: String
 
-    // Isso resolve o erro "has no member 'message'"
-    func message(language: String = "en") -> String {
-        return Localization.shared.translate(messageKey, language: language)
+    func message(language: Any = "en") -> String {
+        // Tenta usar a tradução do app, se falhar, retorna a chave pura
+        return (Localization.shared.translate(messageKey, language: "\(language)")) 
+               ?? messageKey
     }
 }
 
@@ -17,6 +18,7 @@ struct PatchUnlockRequest: Identifiable {
     let item: PatchLibraryItem
 }
 // ---------------------------
+
 
 
 
@@ -377,12 +379,17 @@ try PatchProjectLibrary.installImportedPackage(
             return nil
         }
         
+               // Para patches sem senha, precisamos decodificar com uma chave vazia ou padrão para instalar
+        let decoded = try PatchPackageCodec.decode(data, password: "")
         try PatchProjectLibrary.installImportedPackage(
             data: data,
+            decoded: decoded,
             summary: summary,
             existingURL: existingURL,
             origin: origin
         )
+        return nil
+
         return nil
     }
 
