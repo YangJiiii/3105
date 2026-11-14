@@ -1,27 +1,26 @@
 import Foundation
-import SwiftUI
-// --- DEFINIÇÕES CORRIGIDAS V2 ---
+
 struct PatchStoreAlert: Identifiable {
     let id = UUID()
     let titleKey: String
     let messageKey: String
+    var messageArgument: String?
 
-    func message(language: Any = "en") -> String {
-        // Tenta usar a tradução do app, se falhar, retorna a chave pura
-        return (Localization.shared.translate(messageKey, language: "\(language)")) 
-               ?? messageKey
+    init(titleKey: String, messageKey: String, messageArgument: String? = nil) {
+        self.titleKey = titleKey
+        self.messageKey = messageKey
+        self.messageArgument = messageArgument
+    }
+
+    func message(language: AppLanguage) -> String {
+        if let messageArgument {
+            return language.text(messageKey, messageArgument)
+        }
+        return language.text(messageKey)
     }
 }
 
-struct PatchUnlockRequest: Identifiable {
-    let id: UUID
-    let item: PatchLibraryItem
-}
-// ---------------------------
-
-
-
-
+@MainActor
 final class PatchProjectStore: ObservableObject {
     @Published private(set) var items: [PatchLibraryItem] = []
     @Published private(set) var isBusy = false
