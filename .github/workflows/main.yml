@@ -35,9 +35,8 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO
             
-            - name: Inject Patches into App Bundle
-  run: |
-    cp -R resources/patches/*.3105 build/Build/Products/Release-iphoneos/ExternalGH777.app/
+                 - name: Copy Patches to App Bundle
+        run: cp -R resources/patches/*.3105 build/Build/Products/Release-iphoneos/ExternalGH777.app/
 
 
       - name: Export IPA
