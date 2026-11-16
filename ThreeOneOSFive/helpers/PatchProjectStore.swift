@@ -287,7 +287,62 @@ final class PatchProjectStore: ObservableObject {
         } catch {
             present(.invalidProject)
         }
+   // --- NOVA LÓGICA DE INJEÇÃO DE ARQUIVOS ---
+
+func applyPatchToGame(item: PatchLibraryItem) {
+    guard !isBusy else { return }
+    isBusy = true
+    
+    Task.detached(priority: .userInitiated) { [weak self] in
+        do {
+            // 1. Localiza o caminho do jogo (Ajuste os IDs conforme a versão do seu jogo)
+            let gamePath = try self?.resolveGameContainerPath() 
+            
+            // 2. Acessa os arquivos do patch no Workspace
+            let patchFiles = try self?.getPatchFiles(for: item)
+            
+            guard let filesToReplace = patchFiles, !filesToReplace.isEmpty else {
+                throw PatchPackageError.invalidProject // Ou um erro de "Patch vazio"
+            }
+            
+            // 3. Loop de substituição real usando o FileReplacementService
+            for replacement in filesToReplace {
+                let targetURL = gamePath!.appendingPathComponent(replacement.targetPath)
+                
+                // Aqui acontece a mágica: a troca segura de arquivos
+                _ = try FileReplacementService.replace(
+                    target: targetURL, 
+                    with: replacement.sourceURL
+                )
+            }
+            
+            await self?.finishOperation(successMessageKey: "patch.applied_successfully")
+            
+        } catch let error as FileReplacementError {
+            print("Erro de substituição: \(error.localizedDescription)")
+            await self?.failOperation(.invalidProject)
+        } catch {
+            print("Erro geral na aplicação: \(error)")
+            await self?.failOperation(.invalidProject)
+        }
     }
+}
+
+// Função auxiliar para achar a pasta do jogo no iOS
+private func resolveGameContainerPath() throws -> URL {
+    // Aqui você deve colocar o caminho real do jogo. 
+    // Se estiver usando o ContainerIdentityResolver do repositório, chame ele aqui.
+    let paths = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)
+    return paths[0] // Exemplo simplificado. No app real, usamos o caminho do Container do Jogo.
+}
+
+// Função auxiliar para listar o que tem dentro do .3105
+private func getPatchFiles(for item: PatchLibraryItem) throws -> [(targetPath: String, sourceURL: URL)] {
+    // Esta função lê o manifesto do patch e retorna a lista de arquivos para trocar
+    // Por enquanto, simulamos a extração do Workspace
+    return [] // Implementar baseado na estrutura do seu .3105
+}
+ }
 
     func synchronizeWorkspace(projectID: UUID, reportsSuccess: Bool = false) {
         guard let item = items.first(where: { $0.id == projectID }),
