@@ -408,4 +408,13 @@ enum PatchProjectLibrary {
             options: [.atomic, .completeFileProtection]
         )
     }
+
+    static func setPatchEnabled(_ packageID: UUID, enabled: Bool) throws {
+        let defaults = UserDefaults.standard
+        defaults.set(enabled, forKey: "patch_enabled_\(packageID.uuidString)")
+    }
+
+    static func isPatchEnabled(_ packageID: UUID) -> Bool {
+        return UserDefaults.standard.bool(forKey: "patch_enabled_\(packageID.uuidString)")
+    }
 }
